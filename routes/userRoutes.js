@@ -1,6 +1,6 @@
 // userRoutes.js
 const express = require("express");
-const upload = require("../middlewares/multer");
+const upload = require("../config/multer");
 const router = express.Router();
 
 const {
@@ -10,6 +10,7 @@ const {
   updateUserInfo,
   updatePassword,
   updateEmail,
+  updateProfileImage,
   addPhoneNumber,
   removePhoneNumber,
   deleteUser,
@@ -34,6 +35,12 @@ router.get("/:id/me", authenticateUser, getCurrentUser);
 router.patch("/:id/updateUserInfo", authenticateUser, updateUserInfo);
 router.patch("/:id/updatePassword", authenticateUser, updatePassword);
 router.patch("/:id/updateEmail", authenticateUser, updateEmail);
+router.patch(
+  "/:id/updateProfileImage",
+  authenticateUser,
+  upload.single("profileImage"),
+  updateProfileImage
+);
 router.patch("/:id/addPhoneNumber", authenticateUser, addPhoneNumber);
 router.patch("/:id/removePhoneNumber", authenticateUser, removePhoneNumber);
 router.delete("/:id/deleteUser", authenticateUser, deleteUser);

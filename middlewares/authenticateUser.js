@@ -46,10 +46,7 @@ const isAdmin = (req, res, next) => {
     return next();
   } else {
     console.warn("Admin privilege required but user is:", req.user?.role);
-    return res.status(403).json({
-      success: false,
-      message: "Admin privilege required.",
-    });
+    return errorResponse(res, "Admin privilege required.", 403);
   }
 };
 

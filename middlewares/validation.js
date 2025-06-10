@@ -1,3 +1,4 @@
+// validation.js
 const Joi = require("joi");
 
 // User Registration Schema
@@ -11,8 +12,8 @@ const registerSchema = Joi.object({
 
 // User Login Schema
 const loginSchema = Joi.object({
-  phoneNumber: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
+  phoneNumber: Joi.string().required(),
+  password: Joi.string().min(8).required(),
 });
 
 module.exports = {
