@@ -28,12 +28,18 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    let profileUrl = "";
+    if (req.file) {
+      profileUrl = req.file.path;
+    }
+
     const newUser = new User({
       firstName,
       lastName,
       email,
       phoneNumbers,
       password: hashedPassword,
+      profileUrl,
     });
     await newUser.save();
 

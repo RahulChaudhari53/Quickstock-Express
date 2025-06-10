@@ -7,7 +7,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use("/users", userRoutes);
+app.use("/uploads", express.static("uploads"));
+app.use("/api/users", userRoutes);
 
 module.exports = app;

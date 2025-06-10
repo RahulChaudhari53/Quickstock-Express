@@ -1,5 +1,6 @@
 // userRoutes.js
 const express = require("express");
+const upload = require("../middlewares/multer");
 const router = express.Router();
 
 const {
@@ -18,7 +19,8 @@ const {
 const { authenticateUser } = require("../middlewares/authenticateUser");
 
 // Public routes
-router.post("/signup", registerUser);
+router.post("/signup", upload.single("profileImage"), registerUser);
+// router.post("/signup", registerUser);
 router.post("/login", loginUser);
 
 // Protected routes - user actions
@@ -33,4 +35,4 @@ router.delete("/:id/deleteUser", authenticateUser, deleteUser);
 module.exports = router;
 
 // for now getAll
-router.get("/", getAllUsers)
+router.get("/", getAllUsers);
