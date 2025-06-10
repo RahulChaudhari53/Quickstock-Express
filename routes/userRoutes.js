@@ -17,11 +17,17 @@ const {
 } = require("../controllers/userController");
 
 const { authenticateUser } = require("../middlewares/authenticateUser");
+const { registerSchema, loginSchema } = require("../middlewares/validation");
+const validateRequest = require("../middlewares/validateRequest");
 
 // Public routes
-router.post("/signup", upload.single("profileImage"), registerUser);
-// router.post("/signup", registerUser);
-router.post("/login", loginUser);
+router.post(
+  "/signup",
+  upload.single("profileImage"),
+  validateRequest(registerSchema),
+  registerUser
+);
+router.post("/login", validateRequest(loginSchema), loginUser);
 
 // Protected routes - user actions
 router.get("/:id/me", authenticateUser, getCurrentUser);
