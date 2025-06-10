@@ -1,47 +1,15 @@
+// userController.js
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const { successResponse, errorResponse } = require("../utils/responseHandler");
 
-// GET /users - Get all users
-const getAllUsers = async (req, res) => {
-  console.log("GET /users - Fetching all users...");
+// POST /signup - Register a new user
+const registerUser = async (req, res) => {
+  const { firstName, lastName, email, phoneNumbers, password } = req.body;
 
   try {
-    const userList = await User.find().select("-password");
-    console.log("Fetched users:", userList.length);
-    return successResponse(res, "Users fetched successfully.", userList);
-  } catch (err) {
-    console.error("GET /users - Error:", err);
-    return errorResponse(res, "Failed to fetch users.");
-  }
-};
-
-// GET /users/:id - Get current user
-const getCurrentUser = async (req, res) => {
-  const _id = req.params.id;
-
-  try {
-    const user = await User.findById(_id).select("-password");
-
-    if (!user) {
-      console.log("User not found");
-      return errorResponse(res, "User not found.", 404);
-    }
-
-    console.log("User found:", user);
-    return successResponse(res, "User fetched.", user);
-  } catch (err) {
-    console.error("GET /users/:id - Error:", err);
-    return errorResponse(res, "Error fetching user.");
-  }
-};
-
-// POST /users - Create new user
-const createUser = async (req, res) => {
-  const { firstname, lastname, email, phoneNumbers, password } = req.body;
-
-  try {
-    if (!firstname || !lastname || !email || !phoneNumbers || !password) {
+    if (!firstName || !lastName || !email || !phoneNumbers || !password) {
       return errorResponse(res, "Please fill all fields.", 400);
     }
 
@@ -61,36 +29,125 @@ const createUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
-      firstname,
-      lastname,
+      firstName,
+      lastName,
       email,
       phoneNumbers,
       password: hashedPassword,
     });
     await newUser.save();
 
-    return successResponse(res, "User saved successfully.", newUser);
+    const { password: pwd, ...userWithoutPassword } = newUser.toObject();
+    return successResponse(
+      res,
+      "User saved successfully.",
+      userWithoutPassword
+    );
   } catch (err) {
     console.error("POST /users - Error:", err);
     return errorResponse(res, "Error creating new user.");
   }
 };
 
-// PATCH /users/:id/info - Update user info
+// POST /users/login - Login and receive JWT
+const loginUser = async (req, res) => {
+  const { phoneNumber, password } = req.body;
+
+  if (!phoneNumber || !password) {
+    return errorResponse(
+      res,
+      "Please provide both phoneNumber and password.",
+      400
+    );
+  }
+
+  try {
+    console.log("Request Body:", req.body);
+
+    const user = await User.findOne({
+      phoneNumbers: { $in: [phoneNumber] },
+    });
+
+    console.log("Found User:", user);
+
+    if (!user) {
+      return errorResponse(
+        res,
+        "User not found with the provided phone number.",
+        404
+      );
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log("Password Match:", isMatch);
+
+    if (!isMatch) {
+      return errorResponse(res, "Invalid password.", 400);
+    }
+
+    const payload = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumbers: user.phoneNumbers,
+      role: user.role,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    const { password: _, ...userWithoutPassword } = user.toObject();
+
+    return successResponse(res, "User successfully logged in.", {
+      user: userWithoutPassword,
+      token,
+    });
+  } catch (err) {
+    console.error("Error in loginUser:", err);
+    return errorResponse(
+      res,
+      "Error while logging in. Please try again later."
+    );
+  }
+};
+
+// GET /:id/me - Get current user
+const getCurrentUser = async (req, res) => {
+  const _id = req.params.id;
+
+  try {
+    const user = await User.findById(_id).select("-password");
+
+    if (!user) {
+      console.log("User not found");
+      return errorResponse(res, "User not found.", 404);
+    }
+
+    console.log("User found:", user);
+    return successResponse(res, "User fetched.", user);
+  } catch (err) {
+    console.error("GET /users/:id - Error:", err);
+    return errorResponse(res, "Error fetching user.");
+  }
+};
+
+// PATCH /users/:id/updateUserInfo - Update user info
 const updateUserInfo = async (req, res) => {
-  const { firstname, lastname } = req.body;
+  const { firstName, lastName } = req.body;
   const userId = req.params.id;
 
-  if (!firstname || !lastname) {
-    return errorResponse(res, "Both firstname and lastname are required.", 400);
+  if (!firstName || !lastName) {
+    return errorResponse(res, "Both firstName and lastName are required.", 400);
   }
 
   try {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { firstname, lastname },
+      { firstName, lastName },
       { new: true }
-    );
+    ).select("-password");
     if (!updatedUser) return errorResponse(res, "User not found.", 404);
 
     return successResponse(res, "User info updated.", updatedUser);
@@ -100,7 +157,7 @@ const updateUserInfo = async (req, res) => {
   }
 };
 
-// PATCH /users/:id/password - Update password
+// PATCH /users/:id/updatePassword - Update password
 const updatePassword = async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const userId = req.params.id;
@@ -127,7 +184,7 @@ const updatePassword = async (req, res) => {
   }
 };
 
-// PATCH /users/:id/email - Update email
+// PATCH /users/:id/updateEmail - Update email
 const updateEmail = async (req, res) => {
   const { email } = req.body;
   const userId = req.params.id;
@@ -138,7 +195,7 @@ const updateEmail = async (req, res) => {
 
   try {
     const existing = await User.findOne({ email });
-    if (existing && existing._id.toString() !== userId) {
+    if (existing && existing.email == email) {
       return errorResponse(res, "Email already in use.", 409);
     }
 
@@ -146,7 +203,7 @@ const updateEmail = async (req, res) => {
       userId,
       { email },
       { new: true }
-    );
+    ).select("-password");
     if (!updatedUser) return errorResponse(res, "User not found.", 404);
 
     return successResponse(res, "Email updated.", updatedUser);
@@ -158,59 +215,75 @@ const updateEmail = async (req, res) => {
 
 // PATCH /users/:id/addPhoneNumber - Update phone numbers
 const addPhoneNumber = async (req, res) => {
-  const { phoneNumbers } = req.body;
-  const _id = req.params.id;
-
-  if (!Array.isArray(phoneNumbers)) {
-    return errorResponse(res, "Phone numbers must be an array.", 400);
-  }
-
   try {
+    const userId = req.params.id;
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone number is required" });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
-      _id,
-      {
-        $addToSet: { phoneNumbers: { $each: phoneNumbers } },
-      },
+      userId,
+      { $addToSet: { phoneNumbers: phoneNumber } },
       { new: true }
     );
 
-    if (!updatedUser) return errorResponse(res, "User not found.", 404);
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
 
-    return successResponse(res, "Phone number added.", updatedUser);
-  } catch (err) {
-    console.error("PATCH /users/:id/phoneNumbers - Error:", err);
-    return errorResponse(res, "Failed to add phone number.");
+    res.status(200).json({
+      success: true,
+      message: "Phone number added",
+      data: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// PATCH /users/:id/removePhoneNumber - Update phone numbers
+// PATCH /users/:id/removePhoneNumber - Remove phone numbers
 const removePhoneNumber = async (req, res) => {
-  const { phoneNumbers } = req.body;
-  const _id = req.params.id;
-
-  if (!Array.isArray(phoneNumbers)) {
-    return errorResponse(res, "Phone numbers must be an array.", 400);
-  }
-
   try {
+    const userId = req.params.id;
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone number is required" });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
-      _id,
-      {
-        $pull: { phoneNumbers: {$in : phoneNumbers} },
-      },
+      userId,
+      { $pull: { phoneNumbers: phoneNumber } },
       { new: true }
     );
 
-    if (!updatedUser) return errorResponse(res, "User not found.", 404);
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
 
-    return successResponse(res, "Phone number removed.", updatedUser);
-  } catch (err) {
-    console.error("PATCH /users/:id/phoneNumbers - Error:", err);
-    return errorResponse(res, "Failed to remove phone number.");
+    res.status(200).json({
+      success: true,
+      message: "Phone number removed",
+      data: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// DELETE /users/:id
+// Need a api to update userProfile
+
+// DELETE /users/:id/deleteUser
 const deleteUser = async (req, res) => {
   const userId = req.params.id;
 
@@ -228,15 +301,30 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// Export all functions
+// GET /users - Get all users
+const getAllUsers = async (req, res) => {
+  console.log("GET /users - Fetching all users...");
+
+  try {
+    const userList = await User.find().select("-password");
+    console.log("Fetched users:", userList.length);
+    return successResponse(res, "Users fetched successfully.", userList);
+  } catch (err) {
+    console.error("GET /users - Error:", err);
+    return errorResponse(res, "Failed to fetch users.");
+  }
+};
+
 module.exports = {
-  getAllUsers,
+  registerUser,
+  loginUser,
   getCurrentUser,
-  createUser,
   updateUserInfo,
   updatePassword,
   updateEmail,
   addPhoneNumber,
   removePhoneNumber,
   deleteUser,
+
+  getAllUsers, // for now to see all the users later in admin
 };

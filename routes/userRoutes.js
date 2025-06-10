@@ -1,26 +1,36 @@
+// userRoutes.js
 const express = require("express");
 const router = express.Router();
 
 const {
-  getAllUsers,
+  registerUser,
+  loginUser,
   getCurrentUser,
-  createUser,
   updateUserInfo,
   updatePassword,
   updateEmail,
   addPhoneNumber,
   removePhoneNumber,
   deleteUser,
+  getAllUsers,
 } = require("../controllers/userController");
 
-router.get("/", getAllUsers);
-router.get("/:id", getCurrentUser);
-router.post("/", createUser);
-router.patch("/:id/info", updateUserInfo);
-router.patch("/:id/password", updatePassword);
-router.patch("/:id/email", updateEmail);
-router.patch("/:id/addPhoneNumber", addPhoneNumber);
-router.patch("/:id/removePhoneNumber", removePhoneNumber);
-router.delete("/:id", deleteUser);
+const { authenticateUser } = require("../middlewares/authenticateUser");
+
+// Public routes
+router.post("/signup", registerUser);
+router.post("/login", loginUser);
+
+// Protected routes - user actions
+router.get("/:id/me", authenticateUser, getCurrentUser);
+router.patch("/:id/updateUserInfo", authenticateUser, updateUserInfo);
+router.patch("/:id/updatePassword", authenticateUser, updatePassword);
+router.patch("/:id/updateEmail", authenticateUser, updateEmail);
+router.patch("/:id/addPhoneNumber", authenticateUser, addPhoneNumber);
+router.patch("/:id/removePhoneNumber", authenticateUser, removePhoneNumber);
+router.delete("/:id/deleteUser", authenticateUser, deleteUser);
 
 module.exports = router;
+
+// for now getAll
+router.get("/", getAllUsers)
