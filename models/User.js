@@ -9,10 +9,9 @@ const userSchema = new mongoose.Schema(
     phoneNumbers: {
       type: [String],
       default: [],
-      // Add custom validation for array length
       validate: {
         validator: function (v) {
-          return v.length <= 2; // Allow up to 2 phone numbers
+          return v.length <= 2;
         },
         message: (props) =>
           `Maximum of 2 phone numbers allowed. You have ${props.value.length}.`,
@@ -20,7 +19,11 @@ const userSchema = new mongoose.Schema(
     },
     password: { type: String, required: true },
     profileUrl: { type: String },
-    role: { type: String, default: "shop_owner" },
+    role: {
+      type: String,
+      enum: ["shop_owner", "admin"],
+      default: "shop_owner",
+    },
   },
   { timestamps: true }
 );

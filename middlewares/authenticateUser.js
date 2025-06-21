@@ -19,10 +19,10 @@ const authenticateUser = async (req, res, next) => {
     console.log("Extracted Token:", token);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Decoded JWT Payload:", decoded);
+    // console.log("Decoded JWT Payload:", decoded);
 
     const user = await User.findOne({ _id: decoded._id });
-    console.log("Fetched User from DB:", user);
+    // console.log("Fetched User from DB:", user);
 
     if (!user) {
       console.warn("User not found or token mismatch.");

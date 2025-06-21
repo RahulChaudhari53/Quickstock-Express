@@ -14,7 +14,6 @@ const {
   addPhoneNumber,
   removePhoneNumber,
   deleteUser,
-  getAllUsers,
 } = require("../controllers/userController");
 
 const { authenticateUser } = require("../middlewares/authenticateUser");
@@ -46,6 +45,3 @@ router.patch("/:id/removePhoneNumber", authenticateUser, removePhoneNumber);
 router.delete("/:id/deleteUser", authenticateUser, deleteUser);
 
 module.exports = router;
-
-// for now getAll
-router.get("/", getAllUsers);

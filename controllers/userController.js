@@ -414,20 +414,6 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// GET /users - Get all users
-const getAllUsers = async (req, res) => {
-  console.log("GET /users - Fetching all users...");
-
-  try {
-    const userList = await User.find().select("-password");
-    console.log("Fetched users:", userList.length);
-    return successResponse(res, "Users fetched successfully.", userList);
-  } catch (err) {
-    console.error("GET /users - Error:", err);
-    return errorResponse(res, "Failed to fetch users.");
-  }
-};
-
 module.exports = {
   registerUser,
   loginUser,
@@ -440,5 +426,4 @@ module.exports = {
   removePhoneNumber,
   deleteUser,
 
-  getAllUsers, // for now to see all the users later in admin
 };

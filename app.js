@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
+const adminUserRoutes = require("./routes/admin/adminUserRoutes");
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.use(
 
 app.use("/uploads", express.static("uploads"));
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminUserRoutes);
 
 module.exports = app;
