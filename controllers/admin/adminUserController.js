@@ -1,4 +1,4 @@
-// controllers/admin
+// controllers/admin/adminUserController.js
 const User = require("../../models/User");
 const mongoose = require("mongoose");
 const {
@@ -25,7 +25,7 @@ const getAllUsers = async (req, res) => {
       $or: [
         { firstName: { $regex: searchRegex } },
         { lastName: { $regex: searchRegex } },
-        { phoneNumbers: { $in: [search] } },
+        { $or: [{ primaryPhone: search }, { secondaryPhone: search }] },
       ],
     };
 

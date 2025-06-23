@@ -1,4 +1,4 @@
-// userRoutes.js
+// routes/userRoutes.js
 const express = require("express");
 const upload = require("../config/multer");
 const router = express.Router();
@@ -12,19 +12,22 @@ const {
   updateEmail,
   updateProfileImage,
   addPhoneNumber,
-  removePhoneNumber,
+  deletePhoneNumber,
   deleteUser,
 } = require("../controllers/userController");
 
 const { authenticateUser } = require("../middlewares/authenticateUser");
-const { registerSchema, loginSchema } = require("../middlewares/validation");
+const {
+  userValidationSchema,
+  loginSchema,
+} = require("../middlewares/validation");
 const validateRequest = require("../middlewares/validateRequest");
 
 // Public routes
 router.post(
   "/signup",
   upload.single("profileImage"),
-  validateRequest(registerSchema),
+  validateRequest(userValidationSchema),
   registerUser
 );
 router.post("/login", validateRequest(loginSchema), loginUser);
@@ -41,7 +44,8 @@ router.patch(
   updateProfileImage
 );
 router.patch("/:id/addPhoneNumber", authenticateUser, addPhoneNumber);
-router.patch("/:id/removePhoneNumber", authenticateUser, removePhoneNumber);
+router.patch("/:id/deletePhoneNumber", authenticateUser, deletePhoneNumber);
+
 router.delete("/:id/deleteUser", authenticateUser, deleteUser);
 
 module.exports = router;

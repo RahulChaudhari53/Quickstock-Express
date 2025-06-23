@@ -1,4 +1,4 @@
-// validateRequest.js
+// middlewares/validateRequest.js
 const { errorResponse } = require("../utils/responseHandler");
 
 const validateRequest = (schema) => {

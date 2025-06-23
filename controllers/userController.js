@@ -1,4 +1,4 @@
-// userController.js
+// controllers/userController.js
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -6,22 +6,29 @@ const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 // POST /signup - Register a new user
 const registerUser = async (req, res) => {
-  const { firstName, lastName, email, phoneNumbers, password } = req.body;
+  const { firstName, lastName, email, primaryPhone, secondaryPhone, password } =
+    req.body;
 
-  if (!firstName || !lastName || !email || !phoneNumbers || !password) {
+  if (!firstName || !lastName || !email || !primaryPhone || !password) {
     return errorResponse(res, "Please fill all fields.", 400);
   }
 
   try {
+    const phoneConditions = [{ primaryPhone }];
+    if (secondaryPhone) phoneConditions.push({ secondaryPhone });
+
     const existingUser = await User.findOne({
-      $or: [{ email }, { phoneNumbers: { $in: [phoneNumbers] } }],
+      $or: [{ email }, ...phoneConditions],
     });
 
     if (existingUser) {
-      if (existingUser.email === email) {
+      if (existingUser.email == email) {
         return errorResponse(res, "Email is already registered", 409);
       }
-      if (existingUser.phoneNumbers.includes(phoneNumbers)) {
+      if (
+        existingUser.primaryPhone == primaryPhone ||
+        existingUser.primaryPhone == secondaryPhone
+      ) {
         return errorResponse(res, "Phone number is already registered", 409);
       }
     }
@@ -37,7 +44,8 @@ const registerUser = async (req, res) => {
       firstName,
       lastName,
       email,
-      phoneNumbers: [phoneNumbers],
+      primaryPhone,
+      secondaryPhone: undefined,
       password: hashedPassword,
       profileUrl,
     });
@@ -71,10 +79,8 @@ const loginUser = async (req, res) => {
     console.log("Request Body:", req.body);
 
     const user = await User.findOne({
-      phoneNumbers: { $in: [phoneNumber] },
-    });
-
-    console.log("Found User:", user);
+      $or: [{ primaryPhone: phoneNumber }, { secondaryPhone: phoneNumber }],
+    }).select("+password");
 
     if (!user) {
       return errorResponse(res, "Invalid credentials.", 401);
@@ -92,7 +98,8 @@ const loginUser = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      phoneNumbers: user.phoneNumbers,
+      primaryPhone: user.primaryPhone,
+      secondaryPhone: user.secondaryPhone,
       role: user.role,
     };
 
@@ -101,6 +108,8 @@ const loginUser = async (req, res) => {
     });
 
     const { password: _, ...userWithoutPassword } = user.toObject();
+
+    console.log("Found User:", userWithoutPassword);
 
     return successResponse(res, "User successfully logged in.", {
       user: userWithoutPassword,
@@ -119,9 +128,8 @@ const loginUser = async (req, res) => {
 const getCurrentUser = async (req, res) => {
   const userIdFromParam = req.user.id;
 
-  const authenticatedUserId = req.user._id.toString(); // The ID from the JWT token
+  const authenticatedUserId = req.user._id.toString();
 
-  // CRITICAL SECURITY CHECK
   if (userIdFromParam !== authenticatedUserId) {
     return errorResponse(
       res,
@@ -131,7 +139,7 @@ const getCurrentUser = async (req, res) => {
   }
 
   try {
-    const user = await User.findById(userIdFromParam).select("-password");
+    const user = await User.findById(userIdFromParam);
 
     if (!user) {
       console.log(
@@ -162,7 +170,8 @@ const updateUserInfo = async (req, res) => {
       userIdFromParam,
       { firstName, lastName },
       { new: true }
-    ).select("-password");
+    );
+    console.log("User : ", updatedUser);
     if (!updatedUser) return errorResponse(res, "User not found.", 404);
 
     return successResponse(res, "User info updated.", updatedUser);
@@ -182,7 +191,7 @@ const updatePassword = async (req, res) => {
   }
 
   try {
-    const user = await User.findById(userIdFromParam);
+    const user = await User.findById(userIdFromParam).select("+password");
     if (!user) return errorResponse(res, "User not found.", 404);
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
@@ -222,9 +231,10 @@ const updateEmail = async (req, res) => {
       userIdFromParam,
       { email },
       { new: true }
-    ).select("-password");
+    );
     if (!updatedUser) return errorResponse(res, "User not found.", 404);
 
+    console.log("Email Updated.");
     return successResponse(res, "Email updated.", updatedUser);
   } catch (err) {
     console.error("PATCH /users/:id/email - Error:", err);
@@ -245,11 +255,12 @@ const updateProfileImage = async (req, res) => {
       userIdFromParam,
       { profileUrl: req.file.path },
       { new: true }
-    ).select("-password");
+    );
 
     if (!updatedUser) {
       return errorResponse(res, "User not found.", 404);
     }
+    console.log("ProfileImage Updated.");
     return successResponse(
       res,
       "Profile image updated successfully.",
@@ -261,138 +272,113 @@ const updateProfileImage = async (req, res) => {
   }
 };
 
-// PATCH /users/:id/addPhoneNumber - Update phone numbers
+// PATCH /users/:id/addPhoneNumber
 const addPhoneNumber = async (req, res) => {
-  console.log("Adding phone number....");
+  const userId = req.params.id;
+  const { phoneNumber } = req.body;
+
+  if (!phoneNumber) {
+    return errorResponse(res, "Phone number is required.", 400);
+  }
+
+  if (!/^\d{10}$/.test(phoneNumber)) {
+    return errorResponse(res, "Phone number must be exactly 10 digits.", 400);
+  }
+
   try {
-    const userIdFromParam = req.params.id;
-    const { phoneNumber } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return errorResponse(res, "User not found.", 404);
 
-    if (!phoneNumber) {
-      return errorResponse(res, "Phone number is required.", 400);
+    const phones = [user.primaryPhone, user.secondaryPhone].filter(Boolean);
+
+    if (phones.length >= 2) {
+      console.log("Cannot add more than 2 phone numbers.");
+      return errorResponse(res, "Cannot add more than 2 phone numbers.", 400);
     }
 
-    // Find the user first to check current phone number count before updating
-    const user = await User.findById(userIdFromParam);
-    if (!user) {
-      return errorResponse(res, "User not found.", 404);
-    }
-
-    // Check if the phone number already exists
-    if (user.phoneNumbers.includes(phoneNumber)) {
+    if (phones.includes(phoneNumber)) {
+      console.log("Phone number already exists for this user.");
       return errorResponse(
         res,
         "Phone number already exists for this user.",
         409
-      ); // 409 Conflict
+      );
     }
 
-    // Before pushing, check if adding would exceed the limit
-    if (user.phoneNumbers.length >= 2) {
-      return errorResponse(res, "Cannot add more than 2 phone numbers.", 400); // 400 Bad Request
-    }
+    const fieldToUpdate = !user.primaryPhone
+      ? { primaryPhone: phoneNumber }
+      : { secondaryPhone: phoneNumber };
 
-    // If all checks pass, add the new phone number
-    user.phoneNumbers.push(phoneNumber); // Add to the array in memory
+    const updatedUser = await User.findByIdAndUpdate(userId, fieldToUpdate, {
+      new: true,
+      runValidators: true,
+    });
 
-    const updatedUser = await user.save();
-
-    return successResponse(res, "Phone number added.", updatedUser);
-  } catch (error) {
-    console.error("Error adding phone number:", error);
-
-    if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors).map((err) => err.message);
-      return errorResponse(res, messages.join(", "), 400); // Send specific validation messages
-    }
-
-    return errorResponse(res, "Failed to add phone number.");
+    console.log("PhoneNumber Added.");
+    return successResponse(
+      res,
+      "Phone number added successfully.",
+      updatedUser
+    );
+  } catch (err) {
+    console.error("Error adding phone number:", err);
+    return errorResponse(res, "Failed to add phone number.", 500);
   }
 };
 
-// PATCH /users/:id/removePhoneNumber - Remove phone numbers
-const removePhoneNumber = async (req, res) => {
-  console.log("Attempting to remove phone number....");
+// PATCH /users/:id/deletePhoneNumber
+const deletePhoneNumber = async (req, res) => {
+  const userId = req.params.id;
+  const { phoneNumber } = req.body;
+
+  if (!phoneNumber) {
+    console.log("Phone number is required.");
+    return errorResponse(res, "Phone number is required.", 400);
+  }
+
   try {
-    const userIdFromParam = req.params.id;
-    const { phoneNumber } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return errorResponse(res, "User not found.", 404);
 
-    if (!phoneNumber) {
-      console.log("Validation Error: Phone number is required for removal.");
-      return errorResponse(res, "Phone number is required.", 400);
+    const phones = [user.primaryPhone, user.secondaryPhone].filter(Boolean);
+
+    if (!phones.includes(phoneNumber)) {
+      console.log("Phone number not found.");
+      return errorResponse(res, "Phone number not found.", 404);
     }
 
-    const user = await User.findById(userIdFromParam);
-
-    if (!user) {
-      console.log(`User not found for ID: ${userIdFromParam}`);
-      return errorResponse(res, "User not found.", 404);
-    }
-
-    if (!user.phoneNumbers.includes(phoneNumber)) {
-      console.log(
-        `Phone number '${phoneNumber}' not found for user ${userIdFromParam}.`
-      );
-      return errorResponse(
-        res,
-        "Phone number not found in user's record.",
-        404
-      );
-    }
-
-    if (user.phoneNumbers.length <= 1) {
-      console.log(
-        `Constraint Violation: Cannot remove the last phone number for user ${userIdFromParam}.`
-      );
+    if (phones.length <= 1) {
       return errorResponse(
         res,
         "User must have at least one phone number.",
         400
-      ); // 400 Bad Request
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userIdFromParam,
-      { $pull: { phoneNumbers: phoneNumber } },
-      { new: true, runValidators: true } // runValidators: true for schema-level validations if any apply
-    );
-
-    if (!updatedUser) {
-      console.error(
-        `Unexpected: User ${userIdFromParam} disappeared after findById but before update.`
-      );
-      return errorResponse(
-        res,
-        "User not found or an unexpected error occurred during update.",
-        404
       );
     }
-    console.log(
-      `Phone number '${phoneNumber}' successfully removed for user ${userIdFromParam}.`
-    );
+
+    let update = {};
+    if (user.primaryPhone === phoneNumber) {
+      update = {
+        primaryPhone: user.secondaryPhone,
+        $unset: { secondaryPhone: 1 },
+      };
+    } else if (user.secondaryPhone === phoneNumber) {
+      update = { $unset: { secondaryPhone: 1 } };
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, update, {
+      new: true,
+      runValidators: true,
+    });
+
+    console.log("PhoneNumber Deleted.");
     return successResponse(
       res,
       "Phone number removed successfully.",
       updatedUser
     );
-  } catch (error) {
-    console.error("Error removing phone number:", error);
-
-    // Mongoose validation errors (though less likely for $pull without custom schema validation on pull)
-    if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors).map((err) => err.message);
-      return errorResponse(
-        res,
-        `Validation error: ${messages.join(", ")}`,
-        400
-      );
-    }
-
-    return errorResponse(
-      res,
-      "Failed to remove phone number due to an internal error.",
-      500
-    );
+  } catch (err) {
+    console.error("Error deleting phone number:", err);
+    return errorResponse(res, "Failed to delete phone number.", 500);
   }
 };
 
@@ -423,7 +409,6 @@ module.exports = {
   updateEmail,
   updateProfileImage,
   addPhoneNumber,
-  removePhoneNumber,
+  deletePhoneNumber,
   deleteUser,
-
 };
