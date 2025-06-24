@@ -172,4 +172,25 @@ describe("Protected User Apis", () => {
     expect(res.body.message).toBe("Email already in use by another account.");
   });
 
+    test("should update profile image", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updateProfileImage`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .attach("profileImage", "tests/image/confirm1.png");
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Profile image updated successfully.");
+    expect(res.body.data).toHaveProperty("profileImage");
+  });
+
+  test("should add a secondary phone number", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/addPhoneNumber`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ phoneNumber: "9800000003" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.secondaryPhone).toContain("9800000003");
+  });
+
 });
