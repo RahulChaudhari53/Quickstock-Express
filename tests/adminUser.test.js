@@ -222,4 +222,49 @@ describe("Admin User Management API", () => {
       expect(res.body.message).toBe("User not found");
     });
   });
+
+  describe("Make admin api", () => {
+    test("should promote a regular user to admin", async () => {
+      const res = await request(app)
+        .patch(`/api/admin/users/${testUserToPromoteId}/make-admin`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toBe("User promoted to admin successfully");
+      expect(res.body.data.role).toBe("admin");
+
+      // Verify in DB that the user role has changed
+      const updatedUserInDb = await User.findById(testUserToPromoteId);
+      expect(updatedUserInDb.role).toBe("admin");
+    });
+
+    test("should return an error if user is already an admin", async () => {
+      const res = await request(app)
+        .patch(`/api/admin/users/${adminUserId}/make-admin`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("User is already an admin");
+    });
+
+    test("should return 404 if trying to promote a non-existent user", async () => {
+      const nonExistentId = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .patch(`/api/admin/users/${nonExistentId}/make-admin`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.message).toBe("User not found");
+    });
+
+    test("should return 400 for an invalid user ID format when promoting", async () => {
+      const res = await request(app)
+        .patch(`/api/admin/users/${"fafdafafaf2424"}/make-admin`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("Invalid user ID");
+    });
+  });
 });
