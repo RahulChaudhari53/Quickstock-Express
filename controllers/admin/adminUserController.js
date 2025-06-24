@@ -68,7 +68,6 @@ const getUserById = async (req, res) => {
     }
 
     const user = await User.findById(id).select("-password");
-    // console.log("User found:", user);
 
     if (!user) {
       return errorResponse(res, "User not found", 404);
@@ -82,15 +81,43 @@ const getUserById = async (req, res) => {
 };
 
 // PATCH/users/:id/make-admin
+
+// const makeAdmin = async (req, res) => {
+//   try {
+//     const userId = req.params.id;
+
+//     const user = await User.findById(userId);
+//     if (!user) return errorResponse(res, "User not found", 404);
+
+//     if (user.role === "admin") {
+//       return errorResponse(res, "User is already an admin");
+//     }
+
+//     user.role = "admin";
+//     await user.save();
+
+//     return successResponse(res, "User promoted to admin successfully", user);
+//   } catch (err) {
+//     console.error("makeAdmin error:", err);
+//     return errorResponse(res, "Failed to promote user", 500);
+//   }
+// };
+
 const makeAdmin = async (req, res) => {
   try {
     const userId = req.params.id;
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return errorResponse(res, "Invalid user ID", 400);
+    }
+
     const user = await User.findById(userId);
-    if (!user) return errorResponse(res, "User not found", 404);
+    if (!user) {
+      return errorResponse(res, "User not found", 404);
+    }
 
     if (user.role === "admin") {
-      return errorResponse(res, "User is already an admin");
+      return errorResponse(res, "User is already an admin", 400);
     }
 
     user.role = "admin";
