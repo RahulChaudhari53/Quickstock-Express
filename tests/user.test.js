@@ -102,4 +102,25 @@ describe("Protected User Apis", () => {
     expect(res.statusCode).toBe(401);
     expect(res.body.message).toBe("Authentication required.");
   });
+
+    test("should update user info (firstName and lastName)", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updateUserInfo`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ firstName: "Updated", lastName: "User" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.firstName).toBe("Updated");
+    expect(res.body.data.lastName).toBe("User");
+  });
+
+  test("should fail to update user info when missing fields", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updateUserInfo`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ firstName: "Updated" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toBe("Both firstName and lastName are required.");
+  });
 });
