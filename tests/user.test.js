@@ -123,4 +123,25 @@ describe("Protected User Apis", () => {
     expect(res.statusCode).toBe(400);
     expect(res.body.message).toBe("Both firstName and lastName are required.");
   });
+
+    test("should update password", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updatePassword`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ oldPassword: "Sita@123", newPassword: "NewPass@123" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Password updated successfully.");
+  });
+
+  test("should fail update password with wrong old password", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updatePassword`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ oldPassword: "WrongOld", newPassword: "NewPass@123" });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe("Incorrect old password.");
+  });
+
 });
