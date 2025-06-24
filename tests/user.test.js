@@ -144,4 +144,32 @@ describe("Protected User Apis", () => {
     expect(res.body.message).toBe("Incorrect old password.");
   });
 
+    test("should update email", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updateEmail`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ email: "updatedemail@example.com" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.email).toBe("updatedemail@example.com");
+  });
+
+  test("should fail to update email to an existing email", async () => {
+    await request(app).post("/api/users/signup").send({
+      firstName: "Another",
+      lastName: "User",
+      email: "conflict@example.com",
+      primaryPhone: "9800001102",
+      password: "Test@1234",
+    });
+
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updateEmail`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ email: "conflict@example.com" });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.message).toBe("Email already in use by another account.");
+  });
+
 });
