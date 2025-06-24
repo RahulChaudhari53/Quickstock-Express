@@ -35,9 +35,9 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    let profileUrl = "";
+    let profileImage = "";
     if (req.file) {
-      profileUrl = req.file.path;
+      profileImage = req.file.path;
     }
 
     const newUser = new User({
@@ -47,7 +47,7 @@ const registerUser = async (req, res) => {
       primaryPhone,
       secondaryPhone: undefined,
       password: hashedPassword,
-      profileUrl,
+      profileImage,
     });
     await newUser.save();
 
@@ -253,7 +253,7 @@ const updateProfileImage = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       userIdFromParam,
-      { profileUrl: req.file.path },
+      { profileImage: req.file.path },
       { new: true }
     );
 

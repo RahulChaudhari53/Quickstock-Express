@@ -10,16 +10,16 @@ const userValidationSchema = Joi.object({
   firstName: Joi.string().trim().min(2).max(30).required().messages({
     "string.base": "First name must be a string.",
     "string.empty": "First name is required.",
-    "string.min": "First name must be at least {#limit} characters long.",
-    "string.max": "First name must be at most {#limit} characters long.",
+    "string.min": "First name must be at least 2 characters long.",
+    "string.max": "First name must be at most 30 characters long.",
     "any.required": "First name is required.",
   }),
 
   lastName: Joi.string().trim().min(2).max(30).required().messages({
     "string.base": "Last name must be a string.",
     "string.empty": "Last name is required.",
-    "string.min": "Last name must be at least {#limit} characters long.",
-    "string.max": "Last name must be at most {#limit} characters long.",
+    "string.min": "Last name must be at least 2 characters long.",
+    "string.max": "Last name must be at most 30 characters long.",
     "any.required": "Last name is required.",
   }),
 
@@ -57,9 +57,9 @@ const userValidationSchema = Joi.object({
     .messages({
       "string.empty": "Password is required.",
       "passwordComplexity.tooShort":
-        "Password must be at least {#min} characters long.",
+        "Password must be at least 8 characters long.",
       "passwordComplexity.tooLong":
-        "Password must be at most {#max} characters long.",
+        "Password must be at most 30 characters long.",
       "passwordComplexity.lowercase":
         "Password must include at least one lowercase letter.",
       "passwordComplexity.uppercase":
