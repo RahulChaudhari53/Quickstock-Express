@@ -9,7 +9,8 @@ const registerUser = async (req, res) => {
   const { firstName, lastName, email, primaryPhone, secondaryPhone, password } =
     req.body;
 
-  if (!firstName || !lastName || !email || !primaryPhone || !password) {
+  
+    if (!firstName || !lastName || !email || !primaryPhone || !password) {
     return errorResponse(res, "Please fill all fields.", 400);
   }
 
