@@ -6,12 +6,9 @@ const User = require("../models/User");
 
 let testUserId;
 let authToken;
-beforeAll(async () => {
-  await User.deleteOne({ email: "sita@gmail.com" });
-  await User.deleteOne({ email: "conflict@example.com" });
-});
 
 afterAll(async () => {
+  await User.deleteOne({ email: "conflict@example.com" });
   await mongoose.connection.close();
 });
 
@@ -103,7 +100,7 @@ describe("Protected User Apis", () => {
     expect(res.body.message).toBe("Authentication required.");
   });
 
-    test("should update user info (firstName and lastName)", async () => {
+  test("should update user info (firstName and lastName)", async () => {
     const res = await request(app)
       .patch(`/api/users/${testUserId}/updateUserInfo`)
       .set("Authorization", `Bearer ${authToken}`)
@@ -124,7 +121,7 @@ describe("Protected User Apis", () => {
     expect(res.body.message).toBe("Both firstName and lastName are required.");
   });
 
-    test("should update password", async () => {
+  test("should update password", async () => {
     const res = await request(app)
       .patch(`/api/users/${testUserId}/updatePassword`)
       .set("Authorization", `Bearer ${authToken}`)
@@ -144,7 +141,7 @@ describe("Protected User Apis", () => {
     expect(res.body.message).toBe("Incorrect old password.");
   });
 
-    test("should update email", async () => {
+  test("should update email", async () => {
     const res = await request(app)
       .patch(`/api/users/${testUserId}/updateEmail`)
       .set("Authorization", `Bearer ${authToken}`)
@@ -172,7 +169,7 @@ describe("Protected User Apis", () => {
     expect(res.body.message).toBe("Email already in use by another account.");
   });
 
-    test("should update profile image", async () => {
+  test("should update profile image", async () => {
     const res = await request(app)
       .patch(`/api/users/${testUserId}/updateProfileImage`)
       .set("Authorization", `Bearer ${authToken}`)
@@ -193,4 +190,54 @@ describe("Protected User Apis", () => {
     expect(res.body.data.secondaryPhone).toContain("9800000003");
   });
 
+  test("should not add more than 2 phone numbers", async () => {
+    await request(app)
+      .patch(`/api/users/${testUserId}/addPhoneNumber`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ phoneNumber: "9800000004" });
+
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/addPhoneNumber`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ phoneNumber: "9800000005" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toMatch(/Cannot add more than 2 phone numbers/);
+  });
+
+  test("should delete secondary phone number", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/deletePhoneNumber`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ phoneNumber: "9800000003" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Phone number removed successfully.");
+  });
+
+  test("should not delete the only phone number", async () => {
+    await request(app)
+      .patch(`/api/users/${testUserId}/deletePhoneNumber`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ phoneNumber: "9800000004" });
+
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/deletePhoneNumber`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ phoneNumber: "9800000000" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toMatch(
+      /User must have at least one phone number/
+    );
+  });
+
+  test("should delete user", async () => {
+    const res = await request(app)
+      .delete(`/api/users/${testUserId}/deleteUser`)
+      .set("Authorization", `Bearer ${authToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("User deleted successfully.");
+  });
 });
