@@ -92,3 +92,14 @@ describe("User Register and Login", () => {
     expect(res.body.message).toBe("Invalid credentials.");
   });
 });
+
+describe("Protected User Apis", () => {
+  test("should fail to update user info when no auth authToken is provided", async () => {
+    const res = await request(app)
+      .patch(`/api/users/${testUserId}/updateUserInfo`)
+      .send({ firstName: "Updated", lastName: "User" });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.message).toBe("Authentication required.");
+  });
+});
