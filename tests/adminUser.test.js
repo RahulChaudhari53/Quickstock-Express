@@ -190,4 +190,36 @@ describe("Admin User Management API", () => {
       }
     });
   });
+
+  describe("Get user by ID", () => {
+    test("should fetch a user by valid ID", async () => {
+      const res = await request(app)
+        .get(`/api/admin/users/${regularUserId}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty("_id", regularUserId);
+      expect(res.body.data).not.toHaveProperty("password");
+    });
+
+    test("should return 400 for an invalid user ID format", async () => {
+      const res = await request(app)
+        .get(`/api/admin/users/${"trwtwtrrtwtw"}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("Invalid user ID");
+    });
+
+    test("should return 404 for a non-existent user ID", async () => {
+      const nonExistentId = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .get(`/api/admin/users/${nonExistentId}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.message).toBe("User not found");
+    });
+  });
 });
