@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
-      match: /^\S+@\S+\.\S+$/,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
     primaryPhone: {
       type: String,
@@ -57,7 +57,7 @@ const userSchema = new mongoose.Schema(
     profileImage: { type: String, required: false, trim: true },
     role: {
       type: String,
-      enum: ["shop_owner", "admin"],
+      enum: ["shop_owner", "admin"], 
       default: "shop_owner",
       required: true,
     },
@@ -73,6 +73,10 @@ userSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
+
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 module.exports = User;
