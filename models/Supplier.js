@@ -10,7 +10,6 @@ const supplierSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 100,
     },
-
     contactPerson: {
       type: String,
       required: true,
@@ -18,13 +17,12 @@ const supplierSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 50,
     },
-
     email: {
       type: String,
       required: true,
       lowercase: true,
       trim: true,
-      match: /^\S+@\S+\.\S+$/,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
     phone: {
       type: String,
@@ -37,48 +35,6 @@ const supplierSchema = new mongoose.Schema(
         message: (props) =>
           `${props.value} is not a valid phone number! Must be exactly 10 digits.`,
       },
-    },
-
-    // is optional
-    address: {
-      street: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 200,
-      },
-      city: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 50,
-      },
-      state: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 50,
-      },
-      zipCode: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 10,
-      },
-      country: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 50,
-        default: "Nepal",
-      },
-    },
-
-    panNumber: {
-      type: String,
-      trim: true,
-      maxlength: 20,
-      // PAN (Permanent Account Number) for Nepal
     },
 
     paymentTerms: {
