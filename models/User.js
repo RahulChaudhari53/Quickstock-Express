@@ -57,8 +57,13 @@ const userSchema = new mongoose.Schema(
     profileImage: { type: String, required: false, trim: true },
     role: {
       type: String,
-      enum: ["shop_owner", "admin"], 
+      enum: ["shop_owner", "admin"],
       default: "shop_owner",
+      required: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true, 
       required: true,
     },
   },
