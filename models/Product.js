@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema(
     sku: {
       type: String,
       unique: true,
-      sparse: true,
+      required: true,
       trim: true,
       uppercase: true,
       minlength: 3,
@@ -25,10 +25,9 @@ const productSchema = new mongoose.Schema(
       maxlength: 500,
     },
     category: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: true,
-      trim: true,
-      maxlength: 50,
     },
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
@@ -49,6 +48,8 @@ const productSchema = new mongoose.Schema(
         "box",
         "pack",
         "dozen",
+        "pair",
+        "set",
       ],
       default: "piece",
     },
@@ -62,7 +63,13 @@ const productSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-
+    images: [
+      {
+        type: String,
+        trim: true,
+        // need to put validation
+      },
+    ], 
     minStockLevel: {
       type: Number,
       default: 10,
