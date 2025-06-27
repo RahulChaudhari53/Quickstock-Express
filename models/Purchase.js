@@ -80,8 +80,33 @@ const purchaseSchema = new mongoose.Schema(
   }
 );
 
-purchaseSchema.pre("save", function (next) {
+// Pre-save hook to calculate totalAmount and auto-generate purchaseNumber
+purchaseSchema.pre("save", async function (next) {
   this.totalAmount = this.items.reduce((sum, item) => sum + item.totalCost, 0);
+
+  if (this.isNew && !this.purchaseNumber) {
+    try {
+      const lastPurchase = await this.constructor
+        .findOne({}, { purchaseNumber: 1 })
+        .sort({ purchaseNumber: -1 })
+        .exec();
+
+      let nextNumber = 1;
+      if (lastPurchase && lastPurchase.purchaseNumber) {
+        const lastNum = parseInt(
+          lastPurchase.purchaseNumber.replace("PO-", "")
+        );
+        if (!isNaN(lastNum)) {
+          nextNumber = lastNum + 1;
+        }
+      }
+      this.purchaseNumber = `PO-${String(nextNumber).padStart(6, "0")}`; // e.g., PO-000001
+    } catch (error) {
+      console.error("Error generating purchase number:", error);
+      return next(error);
+    }
+  }
+
   next();
 });
 
