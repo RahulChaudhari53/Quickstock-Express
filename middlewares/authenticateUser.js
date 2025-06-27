@@ -19,10 +19,10 @@ const authenticateUser = async (req, res, next) => {
     console.log("Extracted Token:", token);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // console.log("Decoded JWT Payload:", decoded);
+    console.log("Decoded JWT Payload:", decoded);
 
     const user = await User.findOne({ _id: decoded._id });
-    // console.log("Fetched User from DB:", user);
+    console.log("Fetched User from DB:", user);
 
     if (!user) {
       console.warn("User not found or token mismatch.");
@@ -34,6 +34,11 @@ const authenticateUser = async (req, res, next) => {
     next();
   } catch (err) {
     console.error("Authorization failed:", err.message);
+    if (err.name === "TokenExpiredError") {
+      return errorResponse(res, "Authentication failed: Token expired.", 401);
+    } else if (err.name === "JsonWebTokenError") {
+      return errorResponse(res, "Authentication failed: Invalid token.", 401);
+    }
     return errorResponse(res, "Authorization failed.", 500, err.message);
   }
 };
