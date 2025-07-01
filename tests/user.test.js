@@ -6,7 +6,7 @@ const User = require("../models/User");
 let testUserId;
 let authToken;
 
-beforeAll(async () => {
+afterAll(async () => {
   await User.deleteMany({
     $or: [
       { email: "sita@gmail.com" },
@@ -14,10 +14,6 @@ beforeAll(async () => {
       { email: "conflict@example.com" },
     ],
   });
-});
-
-afterAll(async () => {
-  await User.deleteOne({ email: "conflict@example.com" });
   await mongoose.connection.close();
 });
 
