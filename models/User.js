@@ -1,6 +1,6 @@
 // models/User.js
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema(
   {
@@ -24,33 +24,18 @@ const userSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
-      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
     primaryPhone: {
       type: String,
       required: true,
       unique: true,
       trim: true,
-      validate: {
-        validator: function (v) {
-          return /^\d{10}$/.test(v);
-        },
-        message: (props) =>
-          `${props.value} is not a valid phone number! Must be exactly 10 digits.`,
-      },
     },
     secondaryPhone: {
       type: String,
       unique: true,
       sparse: true,
       trim: true,
-      validate: {
-        validator: function (v) {
-          return !v || /^\d{10}$/.test(v);
-        },
-        message: (props) =>
-          `${props.value} is not a valid phone number! Must be exactly 10 digits.`,
-      },
       required: false,
     },
     password: { type: String, required: true, minlength: 8, select: false },
@@ -63,7 +48,7 @@ const userSchema = new mongoose.Schema(
     },
     isActive: {
       type: Boolean,
-      default: true, 
+      default: true,
       required: true,
     },
   },

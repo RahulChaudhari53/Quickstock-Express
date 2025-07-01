@@ -1,44 +1,42 @@
-// controllers/userController.js
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { successResponse, errorResponse } = require("../utils/responseHandler");
 
-// POST /signup - Register a new user
-const registerUser = async (req, res) => {
-  const { firstName, lastName, email, primaryPhone, secondaryPhone, password } =
-    req.body;
+const registerUser = async (req, res, next) => {
+  const { firstName, lastName, email, primaryPhone, password } = req.body;
 
-  
-    if (!firstName || !lastName || !email || !primaryPhone || !password) {
-    return errorResponse(res, "Please fill all fields.", 400);
+  if (!firstName || !lastName || !email || !primaryPhone || !password) {
+    return errorResponse(res, "Please fill all required fields.", 400);
   }
 
   try {
-    const phoneConditions = [{ primaryPhone }];
-    if (secondaryPhone) phoneConditions.push({ secondaryPhone });
-
     const existingUser = await User.findOne({
-      $or: [{ email }, ...phoneConditions],
+      $or: [
+        { email: email },
+        { primaryPhone: primaryPhone },
+        { secondaryPhone: primaryPhone },
+      ],
     });
 
     if (existingUser) {
-      if (existingUser.email == email) {
-        return errorResponse(res, "Email is already registered", 409);
+      if (existingUser.email === email) {
+        return errorResponse(
+          res,
+          "An account with this email already exists.",
+          409
+        );
       }
       if (
-        existingUser.primaryPhone == primaryPhone ||
-        existingUser.primaryPhone == secondaryPhone
+        existingUser.primaryPhone === primaryPhone ||
+        existingUser.secondaryPhone === primaryPhone
       ) {
-        return errorResponse(res, "Phone number is already registered", 409);
+        return errorResponse(
+          res,
+          "An account with this phone number already exists.",
+          409
+        );
       }
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    let profileImage = "";
-    if (req.file) {
-      profileImage = req.file.path;
     }
 
     const newUser = new User({
@@ -46,28 +44,25 @@ const registerUser = async (req, res) => {
       lastName,
       email,
       primaryPhone,
-      secondaryPhone: undefined,
-      password: hashedPassword,
-      profileImage,
+      password,
     });
     await newUser.save();
 
-    const { password: pwd, ...userWithoutPassword } = newUser.toObject();
+    const { password: _, ...userWithoutPassword } = newUser.toObject();
     return successResponse(
       res,
-      "User saved successfully.",
-      userWithoutPassword
+      "User registered successfully.",
+      userWithoutPassword,
+      201
     );
   } catch (err) {
-    console.error("POST /users - Error:", err);
-    return errorResponse(res, "Error creating new user.");
+    next(err);
   }
 };
 
-// POST /users/login - Login and receive JWT
-const loginUser = async (req, res) => {
+// POST /login - Login and receive JWT
+const loginUser = async (req, res, next) => {
   const { phoneNumber, password } = req.body;
-
   if (!phoneNumber || !password) {
     return errorResponse(
       res,
@@ -77,327 +72,245 @@ const loginUser = async (req, res) => {
   }
 
   try {
-    console.log("Request Body:", req.body);
-
     const user = await User.findOne({
       $or: [{ primaryPhone: phoneNumber }, { secondaryPhone: phoneNumber }],
+      isActive: true,
     }).select("+password");
 
     if (!user) {
-      return errorResponse(res, "Invalid credentials.", 401);
+      return errorResponse(
+        res,
+        "Invalid credentials or user is inactive.",
+        401
+      );
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password Match:", isMatch);
-
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return errorResponse(res, "Invalid credentials.", 401);
     }
 
-    const payload = {
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      primaryPhone: user.primaryPhone,
-      secondaryPhone: user.secondaryPhone,
-      role: user.role,
-    };
-
+    const payload = { _id: user._id, role: user.role };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
     const { password: _, ...userWithoutPassword } = user.toObject();
-
-    console.log("Found User:", userWithoutPassword);
-
     return successResponse(res, "User successfully logged in.", {
       user: userWithoutPassword,
       token,
     });
   } catch (err) {
-    console.error("Error in loginUser:", err);
-    return errorResponse(
-      res,
-      "Error while logging in. Please try again later."
-    );
+    next(err);
   }
 };
 
-// GET /:id/me - Get current user
-const getCurrentUser = async (req, res) => {
-  const userIdFromParam = req.user.id;
-
-  const authenticatedUserId = req.user._id.toString();
-
-  if (userIdFromParam !== authenticatedUserId) {
-    return errorResponse(
-      res,
-      "You are not authorized to modify this user's information.",
-      403
-    );
-  }
-
+// GET /me - Get current user profile
+const getCurrentUser = async (req, res, next) => {
   try {
-    const user = await User.findById(userIdFromParam);
-
+    const user = await User.findById(req.user._id);
     if (!user) {
-      console.log(
-        "User not found via token ID. This should ideally not happen if token is valid."
-      );
       return errorResponse(res, "User not found.", 404);
     }
-
-    console.log("User found:", user);
-    return successResponse(res, "User fetched.", user);
+    return successResponse(res, "User profile fetched successfully.", user);
   } catch (err) {
-    console.error("GET /users/:id - Error:", err);
-    return errorResponse(res, "Error fetching user.");
+    next(err);
   }
 };
 
-// PATCH /users/:id/updateUserInfo - Update user info
-const updateUserInfo = async (req, res) => {
+// PATCH /:id/updateUserInfo - Update user info
+const updateUserInfo = async (req, res, next) => {
   const { firstName, lastName } = req.body;
-  const userIdFromParam = req.params.id;
-
   if (!firstName || !lastName) {
     return errorResponse(res, "Both firstName and lastName are required.", 400);
   }
-
   try {
     const updatedUser = await User.findByIdAndUpdate(
-      userIdFromParam,
+      req.params.id,
       { firstName, lastName },
-      { new: true }
+      { new: true, runValidators: true }
     );
-    console.log("User : ", updatedUser);
     if (!updatedUser) return errorResponse(res, "User not found.", 404);
-
-    return successResponse(res, "User info updated.", updatedUser);
+    return successResponse(res, "User info updated successfully.", updatedUser);
   } catch (err) {
-    console.error("PATCH /users/:id/info - Error:", err);
-    return errorResponse(res, "Failed to update user info.");
+    next(err);
   }
 };
 
-// PATCH /users/:id/updatePassword - Update password
-const updatePassword = async (req, res) => {
+// PATCH /:id/updatePassword - Update password
+const updatePassword = async (req, res, next) => {
   const { oldPassword, newPassword } = req.body;
-  const userIdFromParam = req.params.id;
-
   if (!oldPassword || !newPassword) {
     return errorResponse(res, "Both old and new password are required.", 400);
   }
-
   try {
-    const user = await User.findById(userIdFromParam).select("+password");
+    const user = await User.findById(req.params.id).select("+password");
     if (!user) return errorResponse(res, "User not found.", 404);
 
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    const isMatch = await user.comparePassword(oldPassword);
     if (!isMatch) return errorResponse(res, "Incorrect old password.", 401);
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    user.password = newPassword;
     await user.save();
-
     return successResponse(res, "Password updated successfully.");
   } catch (err) {
-    console.error("PATCH /users/:id/password - Error:", err);
-    return errorResponse(res, "Failed to update password.");
+    next(err);
   }
 };
 
-// PATCH /users/:id/updateEmail - Update email
-const updateEmail = async (req, res) => {
+// PATCH /:id/updateEmail - Update email
+const updateEmail = async (req, res, next) => {
   const { email } = req.body;
-  const userIdFromParam = req.params.id;
-
-  if (!email) {
-    return errorResponse(res, "Email is required.", 400);
-  }
-
+  if (!email) return errorResponse(res, "Email is required.", 400);
   try {
-    const existing = await User.findOne({ email });
-    if (existing && existing._id.toString() !== userIdFromParam) {
-      return errorResponse(
-        res,
-        "Email already in use by another account.",
-        409
-      );
-    }
-
     const updatedUser = await User.findByIdAndUpdate(
-      userIdFromParam,
+      req.params.id,
       { email },
-      { new: true }
+      { new: true, runValidators: true }
     );
     if (!updatedUser) return errorResponse(res, "User not found.", 404);
-
-    console.log("Email Updated.");
-    return successResponse(res, "Email updated.", updatedUser);
+    return successResponse(res, "Email updated successfully.", updatedUser);
   } catch (err) {
-    console.error("PATCH /users/:id/email - Error:", err);
-    return errorResponse(res, "Failed to update email.");
+    next(err);
   }
 };
 
-// Patch /users/:id/updateProfileImage - Update user profile image
-const updateProfileImage = async (req, res) => {
-  const userIdFromParam = req.params.id;
-
+// PATCH /:id/updateProfileImage - Update user profile image
+const updateProfileImage = async (req, res, next) => {
   try {
-    if (!req.file) {
-      return errorResponse(res, "No fil uploaded.", 400);
-    }
-
+    if (!req.file) return errorResponse(res, "No file uploaded.", 400);
     const updatedUser = await User.findByIdAndUpdate(
-      userIdFromParam,
+      req.params.id,
       { profileImage: req.file.path },
       { new: true }
     );
-
-    if (!updatedUser) {
-      return errorResponse(res, "User not found.", 404);
-    }
-    console.log("ProfileImage Updated.");
+    if (!updatedUser) return errorResponse(res, "User not found.", 404);
     return successResponse(
       res,
       "Profile image updated successfully.",
       updatedUser
     );
   } catch (err) {
-    console.error("PATCH /users/:id/updateProfileImage - Error:", err);
-    return errorResponse(res, "Failed to update profile image.");
+    next(err);
   }
 };
 
-// PATCH /users/:id/addPhoneNumber
-const addPhoneNumber = async (req, res) => {
-  const userId = req.params.id;
+// PATCH /:id/addPhoneNumber
+const addPhoneNumber = async (req, res, next) => {
   const { phoneNumber } = req.body;
-
   if (!phoneNumber) {
     return errorResponse(res, "Phone number is required.", 400);
   }
-
   if (!/^\d{10}$/.test(phoneNumber)) {
     return errorResponse(res, "Phone number must be exactly 10 digits.", 400);
   }
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(req.params.id);
     if (!user) return errorResponse(res, "User not found.", 404);
 
-    const phones = [user.primaryPhone, user.secondaryPhone].filter(Boolean);
-
-    if (phones.length >= 2) {
-      console.log("Cannot add more than 2 phone numbers.");
-      return errorResponse(res, "Cannot add more than 2 phone numbers.", 400);
-    }
-
-    if (phones.includes(phoneNumber)) {
-      console.log("Phone number already exists for this user.");
+    if (
+      user.primaryPhone === phoneNumber ||
+      user.secondaryPhone === phoneNumber
+    ) {
       return errorResponse(
         res,
-        "Phone number already exists for this user.",
+        "This phone number is already associated with your account.",
         409
       );
     }
 
-    const fieldToUpdate = !user.primaryPhone
-      ? { primaryPhone: phoneNumber }
-      : { secondaryPhone: phoneNumber };
+    if (user.secondaryPhone) {
+      return errorResponse(res, "Cannot add more than two phone numbers.", 400);
+    }
 
-    const updatedUser = await User.findByIdAndUpdate(userId, fieldToUpdate, {
-      new: true,
-      runValidators: true,
+    const existingPhoneUser = await User.findOne({
+      $or: [{ primaryPhone: phoneNumber }, { secondaryPhone: phoneNumber }],
     });
+    if (existingPhoneUser) {
+      return errorResponse(
+        res,
+        "This phone number is already registered with another account.",
+        409
+      );
+    }
 
-    console.log("PhoneNumber Added.");
+    user.secondaryPhone = phoneNumber;
+    await user.save();
+
     return successResponse(
       res,
-      "Phone number added successfully.",
-      updatedUser
+      "Secondary phone number added successfully.",
+      user
     );
   } catch (err) {
-    console.error("Error adding phone number:", err);
-    return errorResponse(res, "Failed to add phone number.", 500);
+    next(err);
   }
 };
 
-// PATCH /users/:id/deletePhoneNumber
-const deletePhoneNumber = async (req, res) => {
-  const userId = req.params.id;
+// PATCH /:id/deletePhoneNumber
+const deletePhoneNumber = async (req, res, next) => {
   const { phoneNumber } = req.body;
-
   if (!phoneNumber) {
-    console.log("Phone number is required.");
-    return errorResponse(res, "Phone number is required.", 400);
+    return errorResponse(res, "Phone number to delete is required.", 400);
   }
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(req.params.id);
     if (!user) return errorResponse(res, "User not found.", 404);
 
-    const phones = [user.primaryPhone, user.secondaryPhone].filter(Boolean);
-
-    if (!phones.includes(phoneNumber)) {
-      console.log("Phone number not found.");
-      return errorResponse(res, "Phone number not found.", 404);
+    if (
+      user.primaryPhone !== phoneNumber &&
+      user.secondaryPhone !== phoneNumber
+    ) {
+      return errorResponse(res, "Phone number not found for this user.", 404);
     }
 
-    if (phones.length <= 1) {
+    if (!user.secondaryPhone) {
       return errorResponse(
         res,
-        "User must have at least one phone number.",
+        "Cannot delete the only phone number for the account.",
         400
       );
     }
 
-    let update = {};
+    let update;
     if (user.primaryPhone === phoneNumber) {
       update = {
         primaryPhone: user.secondaryPhone,
         $unset: { secondaryPhone: 1 },
       };
-    } else if (user.secondaryPhone === phoneNumber) {
+    } else {
       update = { $unset: { secondaryPhone: 1 } };
     }
 
-    const updatedUser = await User.findByIdAndUpdate(userId, update, {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, update, {
       new: true,
-      runValidators: true,
     });
-
-    console.log("PhoneNumber Deleted.");
     return successResponse(
       res,
       "Phone number removed successfully.",
       updatedUser
     );
   } catch (err) {
-    console.error("Error deleting phone number:", err);
-    return errorResponse(res, "Failed to delete phone number.", 500);
+    next(err);
   }
 };
 
-// DELETE /users/:id/deleteUser
-const deleteUser = async (req, res) => {
-  const userId = req.params.id;
-
+// DELETE /:id/deactivateUser (Soft Delete)
+const deactivateUser = async (req, res, next) => {
   try {
-    const deletedUser = await User.findByIdAndDelete(userId);
-
-    if (!deletedUser) {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: false },
+      { new: true }
+    );
+    if (!user) {
       return errorResponse(res, "User not found.", 404);
     }
-
-    return successResponse(res, "User deleted successfully.");
+    return successResponse(res, "User account deactivated successfully.");
   } catch (err) {
-    console.error("DELETE /users/:id - Error:", err);
-    return errorResponse(res, "Error deleting user.");
+    next(err);
   }
 };
 
@@ -411,5 +324,5 @@ module.exports = {
   updateProfileImage,
   addPhoneNumber,
   deletePhoneNumber,
-  deleteUser,
+  deactivateUser,
 };

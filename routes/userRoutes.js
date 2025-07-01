@@ -1,4 +1,3 @@
-// routes/userRoutes.js
 const express = require("express");
 const upload = require("../config/multer");
 const router = express.Router();
@@ -13,39 +12,34 @@ const {
   updateProfileImage,
   addPhoneNumber,
   deletePhoneNumber,
-  deleteUser,
+  deactivateUser,
 } = require("../controllers/userController");
 
-const { authenticateUser } = require("../middlewares/authenticateUser");
 const {
-  userValidationSchema,
-  loginSchema,
-} = require("../middlewares/validation");
-const validateRequest = require("../middlewares/validateRequest");
+  authenticateUser,
+  isOwner,
+} = require("../middlewares/authenticateUser");
 
 // Public routes
-router.post(
-  "/signup",
-  upload.single("profileImage"),
-  validateRequest(userValidationSchema),
-  registerUser
-);
-router.post("/login", validateRequest(loginSchema), loginUser);
+router.post("/signup", upload.single("profileImage"), registerUser);
+router.post("/login", loginUser);
 
-// Protected routes - user actions
-router.get("/:id/me", authenticateUser, getCurrentUser);
-router.patch("/:id/updateUserInfo", authenticateUser, updateUserInfo);
-router.patch("/:id/updatePassword", authenticateUser, updatePassword);
-router.patch("/:id/updateEmail", authenticateUser, updateEmail);
+// Protected routes
+router.use(authenticateUser);
+
+router.get("/me", getCurrentUser);
+
+router.patch("/:id/updateUserInfo", isOwner, updateUserInfo);
+router.patch("/:id/updatePassword", isOwner, updatePassword);
+router.patch("/:id/updateEmail", isOwner, updateEmail);
 router.patch(
   "/:id/updateProfileImage",
-  authenticateUser,
+  isOwner,
   upload.single("profileImage"),
   updateProfileImage
 );
-router.patch("/:id/addPhoneNumber", authenticateUser, addPhoneNumber);
-router.patch("/:id/deletePhoneNumber", authenticateUser, deletePhoneNumber);
-
-router.delete("/:id/deleteUser", authenticateUser, deleteUser);
+router.patch("/:id/addPhoneNumber", isOwner, addPhoneNumber);
+router.patch("/:id/deletePhoneNumber", isOwner, deletePhoneNumber);
+router.delete("/:id/deactivateUser", isOwner, deactivateUser);
 
 module.exports = router;

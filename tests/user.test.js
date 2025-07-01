@@ -1,4 +1,3 @@
-// tests/user.test.js
 const request = require("supertest");
 const mongoose = require("mongoose");
 const app = require("../app");
@@ -6,6 +5,16 @@ const User = require("../models/User");
 
 let testUserId;
 let authToken;
+
+beforeAll(async () => {
+  await User.deleteMany({
+    $or: [
+      { email: "sita@gmail.com" },
+      { primaryPhone: "9800000000" },
+      { email: "conflict@example.com" },
+    ],
+  });
+});
 
 afterAll(async () => {
   await User.deleteOne({ email: "conflict@example.com" });
@@ -20,7 +29,7 @@ describe("User Register and Login", () => {
     });
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.message).toContain("Last name is required.");
+    expect(res.body.message).toBe("Please fill all required fields.");
   });
 
   test("should register a user successfully", async () => {
@@ -32,7 +41,7 @@ describe("User Register and Login", () => {
       password: "Sita@123",
     });
 
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty("_id");
     expect(res.body.data).not.toHaveProperty("password");
@@ -50,7 +59,7 @@ describe("User Register and Login", () => {
     });
 
     expect(res.statusCode).toBe(409);
-    expect(res.body.message).toBe("Email is already registered");
+    expect(res.body.message).toBe("An account with this email already exists.");
   });
 
   test("should not register a user with duplicate phone number", async () => {
@@ -63,7 +72,9 @@ describe("User Register and Login", () => {
     });
 
     expect(res.statusCode).toBe(409);
-    expect(res.body.message).toBe("Phone number is already registered");
+    expect(res.body.message).toBe(
+      "An account with this phone number already exists."
+    );
   });
 
   test("should login user with valid phone and password", async () => {
@@ -166,7 +177,7 @@ describe("Protected User Apis", () => {
       .send({ email: "conflict@example.com" });
 
     expect(res.statusCode).toBe(409);
-    expect(res.body.message).toBe("Email already in use by another account.");
+    expect(res.body.message).toBe("An account with this email already exists.");
   });
 
   test("should update profile image", async () => {
@@ -202,7 +213,7 @@ describe("Protected User Apis", () => {
       .send({ phoneNumber: "9800000005" });
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.message).toMatch(/Cannot add more than 2 phone numbers/);
+    expect(res.body.message).toBe("Cannot add more than two phone numbers.");
   });
 
   test("should delete secondary phone number", async () => {
@@ -227,17 +238,17 @@ describe("Protected User Apis", () => {
       .send({ phoneNumber: "9800000000" });
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.message).toMatch(
-      /User must have at least one phone number/
+    expect(res.body.message).toBe(
+      "Cannot delete the only phone number for the account."
     );
   });
 
-  test("should delete user", async () => {
+  test("should deactivate user", async () => {
     const res = await request(app)
-      .delete(`/api/users/${testUserId}/deleteUser`)
+      .delete(`/api/users/${testUserId}/deactivateUser`)
       .set("Authorization", `Bearer ${authToken}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.message).toBe("User deleted successfully.");
+    expect(res.body.message).toBe("User account deactivated successfully.");
   });
 });

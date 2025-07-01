@@ -1,4 +1,3 @@
-// tests/adminUser.test.js
 const request = require("supertest");
 const mongoose = require("mongoose");
 const app = require("../app");
@@ -17,35 +16,42 @@ beforeAll(async () => {
     phoneNumber: "9898981910",
     password: "Admin@123",
   });
+
   adminUserId = adminLoginRes.body.data.user._id.toString();
   adminToken = adminLoginRes.body.data.token;
 
-  const hashedPasswordRegular = await bcrypt.hash("Ram@12345", 10);
-  const regularUser = await User.create({
-    firstName: "Ram",
-    lastName: "Bahadur",
-    email: "ram-bahadur@quickstock.com",
-    primaryPhone: "9800444444",
-    password: hashedPasswordRegular,
-  });
+  let regularUser = await User.findOne({ primaryPhone: "9800444444" });
+  if (!regularUser) {
+    regularUser = await User.create({
+      firstName: "Ram",
+      lastName: "Bahadur",
+      email: "ram-bahadur@quickstock.com",
+      primaryPhone: "9800444444",
+      password: "Ram@12345",
+      isActive: true,
+    });
+  }
   regularUserId = regularUser._id.toString();
 
+  // Login regular user
   const regularLoginRes = await request(app).post("/api/users/login").send({
     phoneNumber: "9800444444",
     password: "Ram@12345",
   });
+
   regularUserToken = regularLoginRes.body.data.token;
 
-  // Create a user specifically for the 'make admin' test
-  const hashedPasswordPromote = await bcrypt.hash("PromoteMe@123", 10);
-  const userToPromote = await User.create({
-    firstName: "Promote",
-    lastName: "Me",
-    email: "promoteme@quickstock.com",
-    primaryPhone: "9876543210",
-    password: hashedPasswordPromote,
-    role: "shop_owner",
-  });
+  let userToPromote = await User.findOne({ primaryPhone: "9876543210" });
+  if (!userToPromote) {
+    userToPromote = await User.create({
+      firstName: "Promote",
+      lastName: "Me",
+      email: "promoteme@quickstock.com",
+      primaryPhone: "9876543210",
+      password: "PromoteMe@123",
+      isActive: true,
+    });
+  }
   testUserToPromoteId = userToPromote._id.toString();
   testUserToPromotePhone = userToPromote.primaryPhone;
 });
@@ -87,6 +93,7 @@ describe("Admin User Management API", () => {
           primaryPhone: "9999990001",
           password: await bcrypt.hash("Password@123", 10),
           role: "shop_owner",
+          isActive: true,
         },
         {
           firstName: "Another",
@@ -95,6 +102,7 @@ describe("Admin User Management API", () => {
           primaryPhone: "9999990002",
           password: await bcrypt.hash("Password@123", 10),
           role: "shop_owner",
+          isActive: true,
         },
         {
           firstName: "Filter",
@@ -103,6 +111,7 @@ describe("Admin User Management API", () => {
           primaryPhone: "9999990003",
           password: await bcrypt.hash("Password@123", 10),
           role: "admin",
+          isActive: true,
         },
       ]);
     });
@@ -168,7 +177,6 @@ describe("Admin User Management API", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      // Verify sorting by checking creation dates
       for (let i = 0; i < res.body.data.users.length - 1; i++) {
         const date1 = new Date(res.body.data.users[i].createdAt);
         const date2 = new Date(res.body.data.users[i + 1].createdAt);
@@ -182,7 +190,6 @@ describe("Admin User Management API", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.statusCode).toBe(200);
-      // Verify sorting by checking creation dates
       for (let i = 0; i < res.body.data.users.length - 1; i++) {
         const date1 = new Date(res.body.data.users[i].createdAt);
         const date2 = new Date(res.body.data.users[i + 1].createdAt);
@@ -234,7 +241,6 @@ describe("Admin User Management API", () => {
       expect(res.body.message).toBe("User promoted to admin successfully");
       expect(res.body.data.role).toBe("admin");
 
-      // Verify in DB that the user role has changed
       const updatedUserInDb = await User.findById(testUserToPromoteId);
       expect(updatedUserInDb.role).toBe("admin");
     });

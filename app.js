@@ -1,4 +1,3 @@
-// app.js
 require("dotenv").config();
 
 const express = require("express");
@@ -10,7 +9,6 @@ const userRoutes = require("./routes/userRoutes");
 const adminUserRoutes = require("./routes/admin/adminUserRoutes");
 
 const app = express();
-
 connectDB();
 
 app.use(express.json());
@@ -25,54 +23,30 @@ app.use(
 
 app.use("/uploads", express.static("uploads"));
 
-// API routes
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminUserRoutes);
-// Mount other routes as you create them:
-// app.use("/api/categories", categoryRoutes);
-// app.use("/api/products", productRoutes);
-// app.use("/api/suppliers", supplierRoutes);
-// app.use("/api/customers", customerRoutes);
-// app.use("/api/purchases", purchaseRoutes);
-// app.use("/api/sales", saleRoutes);
 
-// Global Error Handling Middleware
 app.use((err, req, res, next) => {
-  console.error("Global Error Handler:", err.stack);
+  console.error("Global Error Handler:", err);
 
   if (err.name === "CastError" && err.kind === "ObjectId") {
     return errorResponse(res, "Invalid ID format.", 400);
   }
-
   if (err.code === 11000) {
-    const field = Object.keys(err.keyValue);
-    const value = Object.values(err.keyValue);
+    const field = Object.keys(err.keyValue)[0];
     return errorResponse(
       res,
-      `Duplicate field value: '${field}' - '${value}'. Please use another value.`,
-      400
+      `An account with this ${field} already exists.`,
+      409
     );
   }
-
   if (err.name === "ValidationError") {
-    const errors = Object.values(err.errors).map((el) => ({
-      field: el.path,
-      message: el.message,
-      value: el.value,
-    }));
-    return errorResponse(res, "Validation failed.", 400, errors);
+    const message = Object.values(err.errors)
+      .map((val) => val.message)
+      .join(", ");
+    return errorResponse(res, message, 400);
   }
-
-  if (err.statusCode) {
-    return errorResponse(res, err.message, err.statusCode);
-  }
-
-  return errorResponse(
-    res,
-    "Something went wrong! Please try again later.",
-    500,
-    err.message
-  );
+  return errorResponse(res);
 });
 
 module.exports = app;
