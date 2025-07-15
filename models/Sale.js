@@ -33,11 +33,6 @@ const saleSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    customer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Customer",
-      required: false,
-    },
     items: [saleItemSchema],
     totalAmount: {
       type: Number,
@@ -87,7 +82,7 @@ saleSchema.pre("save", async function (next) {
           nextNumber = lastNum + 1;
         }
       }
-      this.invoiceNumber = `INV-${String(nextNumber).padStart(6, "0")}`; 
+      this.invoiceNumber = `INV-${String(nextNumber).padStart(6, "0")}`;
     } catch (error) {
       console.error("Error generating invoice number:", error);
       return next(error);
