@@ -40,7 +40,23 @@ const isAdmin = (req, res, next) => {
 };
 
 const isOwner = (req, res, next) => {
-  if (req.user._id.toString() === req.params.id) {
+  console.log(req.user);
+  if (req.user.role !== "shop_owner") {
+    return errorResponse(
+      res,
+      "You are not authorized to perform this action.",
+      403
+    );
+  }
+  next();
+};
+
+const isSelf = (req, res, next) => {
+  if (
+    req.user &&
+    req.params.userId &&
+    req.user._id.toString() === req.params.userId
+  ) {
     return next();
   }
   return errorResponse(
@@ -52,6 +68,7 @@ const isOwner = (req, res, next) => {
 
 module.exports = {
   authenticateUser,
+  isSelf,
   isAdmin,
   isOwner,
 };
