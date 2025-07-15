@@ -67,11 +67,11 @@ const productSchema = new mongoose.Schema(
       {
         type: String,
         trim: true,
-        // need to put validation
       },
-    ], 
+    ],
     minStockLevel: {
       type: Number,
+      required: true,
       default: 10,
       min: 0,
     },
