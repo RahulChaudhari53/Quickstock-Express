@@ -7,7 +7,7 @@ let testUserId;
 let authToken;
 
 afterAll(async () => {
-  await User.deleteMany({
+  await User.deleteMany({  
     $or: [
       { email: "sita@gmail.com" },
       { primaryPhone: "9800000000" },
@@ -100,7 +100,7 @@ describe("User Register and Login", () => {
 describe("Protected User Apis", () => {
   test("should fail to update user info when no auth authToken is provided", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updateUserInfo`)
+      .patch(`/api/users/updateUserInfo/${testUserId}`)
       .send({ firstName: "Updated", lastName: "User" });
 
     expect(res.statusCode).toBe(401);
@@ -109,7 +109,7 @@ describe("Protected User Apis", () => {
 
   test("should update user info (firstName and lastName)", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updateUserInfo`)
+      .patch(`/api/users/updateUserInfo/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ firstName: "Updated", lastName: "User" });
 
@@ -120,7 +120,7 @@ describe("Protected User Apis", () => {
 
   test("should fail to update user info when missing fields", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updateUserInfo`)
+      .patch(`/api/users/updateUserInfo/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ firstName: "Updated" });
 
@@ -130,7 +130,7 @@ describe("Protected User Apis", () => {
 
   test("should update password", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updatePassword`)
+      .patch(`/api/users/updatePassword/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ oldPassword: "Sita@123", newPassword: "NewPass@123" });
 
@@ -140,7 +140,7 @@ describe("Protected User Apis", () => {
 
   test("should fail update password with wrong old password", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updatePassword`)
+      .patch(`/api/users/updatePassword/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ oldPassword: "WrongOld", newPassword: "NewPass@123" });
 
@@ -150,7 +150,7 @@ describe("Protected User Apis", () => {
 
   test("should update email", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updateEmail`)
+      .patch(`/api/users/updateEmail/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ email: "updatedemail@example.com" });
 
@@ -168,7 +168,7 @@ describe("Protected User Apis", () => {
     });
 
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updateEmail`)
+      .patch(`/api/users/updateEmail/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ email: "conflict@example.com" });
 
@@ -178,7 +178,7 @@ describe("Protected User Apis", () => {
 
   test("should update profile image", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/updateProfileImage`)
+      .patch(`/api/users/updateProfileImage/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .attach("profileImage", "tests/image/confirm1.png");
 
@@ -189,7 +189,7 @@ describe("Protected User Apis", () => {
 
   test("should add a secondary phone number", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/addPhoneNumber`)
+      .patch(`/api/users/addPhoneNumber/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ phoneNumber: "9800000003" });
 
@@ -199,12 +199,12 @@ describe("Protected User Apis", () => {
 
   test("should not add more than 2 phone numbers", async () => {
     await request(app)
-      .patch(`/api/users/${testUserId}/addPhoneNumber`)
+      .patch(`/api/users/addPhoneNumber/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ phoneNumber: "9800000004" });
 
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/addPhoneNumber`)
+      .patch(`/api/users/addPhoneNumber/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ phoneNumber: "9800000005" });
 
@@ -214,7 +214,7 @@ describe("Protected User Apis", () => {
 
   test("should delete secondary phone number", async () => {
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/deletePhoneNumber`)
+      .patch(`/api/users/deletePhoneNumber/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ phoneNumber: "9800000003" });
 
@@ -224,12 +224,12 @@ describe("Protected User Apis", () => {
 
   test("should not delete the only phone number", async () => {
     await request(app)
-      .patch(`/api/users/${testUserId}/deletePhoneNumber`)
+      .patch(`/api/users/deletePhoneNumber/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ phoneNumber: "9800000004" });
 
     const res = await request(app)
-      .patch(`/api/users/${testUserId}/deletePhoneNumber`)
+      .patch(`/api/users/deletePhoneNumber/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`)
       .send({ phoneNumber: "9800000000" });
 
@@ -241,7 +241,7 @@ describe("Protected User Apis", () => {
 
   test("should deactivate user", async () => {
     const res = await request(app)
-      .delete(`/api/users/${testUserId}/deactivateUser`)
+      .delete(`/api/users/deactivateUser/${testUserId}`)
       .set("Authorization", `Bearer ${authToken}`);
 
     expect(res.statusCode).toBe(200);
