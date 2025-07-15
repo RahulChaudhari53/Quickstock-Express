@@ -10,17 +10,11 @@ const supplierSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 100,
     },
-    contactPerson: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 2,
-      maxlength: 50,
-    },
     email: {
       type: String,
       required: true,
       lowercase: true,
+      unique: true,
       trim: true,
       match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
@@ -28,6 +22,7 @@ const supplierSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      unique: true,
       validate: {
         validator: function (v) {
           return /^\d{10}$/.test(v);
@@ -36,14 +31,6 @@ const supplierSchema = new mongoose.Schema(
           `${props.value} is not a valid phone number! Must be exactly 10 digits.`,
       },
     },
-
-    paymentTerms: {
-      type: Number,
-      default: 30,
-      min: 0,
-      max: 365,
-    },
-
     isActive: {
       type: Boolean,
       default: true,
