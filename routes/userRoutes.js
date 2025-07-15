@@ -18,10 +18,11 @@ const {
 const {
   authenticateUser,
   isOwner,
+  isSelf,
 } = require("../middlewares/authenticateUser");
 
 // Public routes
-router.post("/signup", upload.single("profileImage"), registerUser);
+router.post("/signup", registerUser);
 router.post("/login", loginUser);
 
 // Protected routes
@@ -29,17 +30,17 @@ router.use(authenticateUser);
 
 router.get("/me", getCurrentUser);
 
-router.patch("/:id/updateUserInfo", isOwner, updateUserInfo);
-router.patch("/:id/updatePassword", isOwner, updatePassword);
-router.patch("/:id/updateEmail", isOwner, updateEmail);
+router.use(isSelf, isOwner);
+router.patch("/updateUserInfo/:userId", updateUserInfo);
+router.patch("/updatePassword/:userId", updatePassword);
+router.patch("/updateEmail/:userId", updateEmail);
 router.patch(
-  "/:id/updateProfileImage",
-  isOwner,
+  "/updateProfileImage/:userId",
   upload.single("profileImage"),
   updateProfileImage
 );
-router.patch("/:id/addPhoneNumber", isOwner, addPhoneNumber);
-router.patch("/:id/deletePhoneNumber", isOwner, deletePhoneNumber);
-router.delete("/:id/deactivateUser", isOwner, deactivateUser);
+router.patch("/addPhoneNumber/:userId", addPhoneNumber);
+router.patch("/deletePhoneNumber/:userId", deletePhoneNumber);
+router.delete("/deactivateUser/:userId", deactivateUser);
 
 module.exports = router;
