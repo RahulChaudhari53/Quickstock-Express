@@ -3,10 +3,12 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { successResponse, errorResponse } = require("../utils/responseHandler");
 
+// POST /api/users/signup
 const registerUser = async (req, res, next) => {
   const { firstName, lastName, email, primaryPhone, password } = req.body;
 
   if (!firstName || !lastName || !email || !primaryPhone || !password) {
+    console.log("Please fill all required fields.", req.body);
     return errorResponse(res, "Please fill all required fields.", 400);
   }
 
@@ -60,7 +62,7 @@ const registerUser = async (req, res, next) => {
   }
 };
 
-// POST /login - Login and receive JWT
+// POST /api/users/login - Login and receive JWT
 const loginUser = async (req, res, next) => {
   const { phoneNumber, password } = req.body;
   if (!phoneNumber || !password) {
@@ -105,7 +107,7 @@ const loginUser = async (req, res, next) => {
   }
 };
 
-// GET /me - Get current user profile
+// GET /api/users/me - Get current user profile
 const getCurrentUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
@@ -118,7 +120,7 @@ const getCurrentUser = async (req, res, next) => {
   }
 };
 
-// PATCH /:id/updateUserInfo - Update user info
+// PATCH /api/users/updateUserInfo/:userId - Update user info
 const updateUserInfo = async (req, res, next) => {
   const { firstName, lastName } = req.body;
   if (!firstName || !lastName) {
@@ -126,7 +128,7 @@ const updateUserInfo = async (req, res, next) => {
   }
   try {
     const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
+      req.params.userId,
       { firstName, lastName },
       { new: true, runValidators: true }
     );
@@ -137,14 +139,14 @@ const updateUserInfo = async (req, res, next) => {
   }
 };
 
-// PATCH /:id/updatePassword - Update password
+// PATCH /api/users/updatePassword/:userId - Update password
 const updatePassword = async (req, res, next) => {
   const { oldPassword, newPassword } = req.body;
   if (!oldPassword || !newPassword) {
     return errorResponse(res, "Both old and new password are required.", 400);
   }
   try {
-    const user = await User.findById(req.params.id).select("+password");
+    const user = await User.findById(req.params.userId).select("+password");
     if (!user) return errorResponse(res, "User not found.", 404);
 
     const isMatch = await user.comparePassword(oldPassword);
@@ -158,13 +160,13 @@ const updatePassword = async (req, res, next) => {
   }
 };
 
-// PATCH /:id/updateEmail - Update email
+// PATCH /api/users/updateEmail/:userId - Update email
 const updateEmail = async (req, res, next) => {
   const { email } = req.body;
   if (!email) return errorResponse(res, "Email is required.", 400);
   try {
     const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
+      req.params.userId,
       { email },
       { new: true, runValidators: true }
     );
@@ -175,12 +177,12 @@ const updateEmail = async (req, res, next) => {
   }
 };
 
-// PATCH /:id/updateProfileImage - Update user profile image
+// PATCH /api/users/updateProfileImage/:id - Update user profile image
 const updateProfileImage = async (req, res, next) => {
   try {
     if (!req.file) return errorResponse(res, "No file uploaded.", 400);
     const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
+      req.params.userId,
       { profileImage: req.file.path },
       { new: true }
     );
@@ -195,7 +197,7 @@ const updateProfileImage = async (req, res, next) => {
   }
 };
 
-// PATCH /:id/addPhoneNumber
+// PATCH /api/users/addPhoneNumber/:userId
 const addPhoneNumber = async (req, res, next) => {
   const { phoneNumber } = req.body;
   if (!phoneNumber) {
@@ -206,7 +208,7 @@ const addPhoneNumber = async (req, res, next) => {
   }
 
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.userId);
     if (!user) return errorResponse(res, "User not found.", 404);
 
     if (
@@ -248,7 +250,7 @@ const addPhoneNumber = async (req, res, next) => {
   }
 };
 
-// PATCH /:id/deletePhoneNumber
+// PATCH /api/users/deletePhoneNumber/:userId
 const deletePhoneNumber = async (req, res, next) => {
   const { phoneNumber } = req.body;
   if (!phoneNumber) {
@@ -256,7 +258,7 @@ const deletePhoneNumber = async (req, res, next) => {
   }
 
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.userId);
     if (!user) return errorResponse(res, "User not found.", 404);
 
     if (
@@ -284,9 +286,13 @@ const deletePhoneNumber = async (req, res, next) => {
       update = { $unset: { secondaryPhone: 1 } };
     }
 
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, update, {
-      new: true,
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.userId,
+      update,
+      {
+        new: true,
+      }
+    );
     return successResponse(
       res,
       "Phone number removed successfully.",
@@ -297,11 +303,11 @@ const deletePhoneNumber = async (req, res, next) => {
   }
 };
 
-// DELETE /:id/deactivateUser (Soft Delete)
+// DELETE /api/users/deactivateUser/:userId (Soft Delete)
 const deactivateUser = async (req, res, next) => {
   try {
     const user = await User.findByIdAndUpdate(
-      req.params.id,
+      req.params.userId,
       { isActive: false },
       { new: true }
     );
