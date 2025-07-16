@@ -28,7 +28,7 @@ const saleSchema = new mongoose.Schema(
   {
     invoiceNumber: {
       type: String,
-      required: true,
+      // required: true,
       unique: true,
       trim: true,
       uppercase: true,
@@ -36,7 +36,7 @@ const saleSchema = new mongoose.Schema(
     items: [saleItemSchema],
     totalAmount: {
       type: Number,
-      required: true,
+      // required: true,
       min: 0,
     },
     paymentMethod: {
