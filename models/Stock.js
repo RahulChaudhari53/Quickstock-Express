@@ -21,10 +21,10 @@ const stockMovementSchema = new mongoose.Schema(
     },
     sourceModel: {
       type: String,
-      enum: ["Purchase", "Sale", "Adjustment"],
+      enum: ["Purchase", "Sale", "Adjustment", "Product"],
       required: false,
       message:
-        "Source model must be 'Purchase', 'Sale', or 'Adjustment' if provided.",
+        "Source model must be 'Purchase', 'Sale', 'Adjustment' or 'Product' if provided.",
     },
     movedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -75,7 +75,8 @@ stockSchema.statics.recordMovement = async function (
   notes = "",
   sourceDocument = null,
   sourceModel = null,
-  movedBy
+  movedBy,
+  session // this is active mongoose session for transaction support
 ) {
   if (typeof quantity !== "number" || quantity <= 0) {
     throw new Error("Quantity for stock movement must be a positive number.");
@@ -98,7 +99,7 @@ stockSchema.statics.recordMovement = async function (
 
   const movementEntry = {
     movementType: type,
-    quantity: quantity,
+    quantity: quantity, // Using the original quantity for the movement entry
     notes: notes,
     date: new Date(),
     movedBy: movedBy,
@@ -111,21 +112,34 @@ stockSchema.statics.recordMovement = async function (
     movementEntry.sourceModel = sourceModel;
   }
 
+  // building options object for findOneAndUpdate
+  const findAndUpdateOptions = {
+    new: true,
+    upsert: true,
+    runValidators: true,
+  };
+
+  if (session) {
+    findAndUpdateOptions.session = session;
+  }
+
   const updatedStock = await this.findOneAndUpdate(
     { product: productId },
     {
       $inc: { currentStock: updateQuantity },
       $push: { movementHistory: movementEntry },
     },
-    {
-      new: true,
-      upsert: false,
-      runValidators: true,
-    }
+    findAndUpdateOptions
   );
 
   if (!updatedStock) {
     throw new Error(`Stock record not found for product ID: ${productId}.`);
+  }
+
+  if (updatedStock.currentStock < 0) {
+    throw new Error(
+      `Insufficient stock for product ID: ${productId}. Current stock is ${updatedStock.currentStock}, cannot process movement of ${quantity}.`
+    );
   }
 
   return updatedStock;
