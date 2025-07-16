@@ -28,7 +28,7 @@ const purchaseSchema = new mongoose.Schema(
   {
     purchaseNumber: {
       type: String,
-      required: true,
+      // required: true,
       unique: true,
       trim: true,
       uppercase: true,
@@ -42,7 +42,7 @@ const purchaseSchema = new mongoose.Schema(
 
     totalAmount: {
       type: Number,
-      required: true,
+      // required: true,
       min: 0,
     },
 
@@ -82,7 +82,10 @@ const purchaseSchema = new mongoose.Schema(
 
 // Pre-save hook to calculate totalAmount and auto-generate purchaseNumber
 purchaseSchema.pre("save", async function (next) {
-  this.totalAmount = this.items.reduce((sum, item) => sum + item.totalCost, 0);
+  this.totalAmount = (this.items || []).reduce(
+    (sum, item) => sum + item.totalCost,
+    0
+  );
 
   if (this.isNew && !this.purchaseNumber) {
     try {
