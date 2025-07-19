@@ -52,6 +52,8 @@ const isOwner = (req, res, next) => {
 };
 
 const isSelf = (req, res, next) => {
+  console.log("Checking if user is self:", req.user, req.params.userId);
+  console.log("req.params", req.params);
   if (
     req.user &&
     req.params.userId &&
