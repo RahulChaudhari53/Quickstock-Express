@@ -30,17 +30,18 @@ router.use(authenticateUser);
 
 router.get("/me", getCurrentUser);
 
-router.use(isSelf, isOwner);
-router.patch("/updateUserInfo/:userId", updateUserInfo);
-router.patch("/updatePassword/:userId", updatePassword);
-router.patch("/updateEmail/:userId", updateEmail);
+router.use(isOwner);
+router.patch("/updateUserInfo/:userId", isSelf, updateUserInfo);
+router.patch("/updatePassword/:userId", isSelf, updatePassword);
+router.patch("/updateEmail/:userId", isSelf, updateEmail);
 router.patch(
   "/updateProfileImage/:userId",
+  isSelf,
   upload.single("profileImage"),
   updateProfileImage
 );
-router.patch("/addPhoneNumber/:userId", addPhoneNumber);
-router.patch("/deletePhoneNumber/:userId", deletePhoneNumber);
-router.delete("/deactivateUser/:userId", deactivateUser);
+router.patch("/addPhoneNumber/:userId", isSelf, addPhoneNumber);
+router.patch("/deletePhoneNumber/:userId", isSelf, deletePhoneNumber);
+router.delete("/deactivateUser/:userId", isSelf, deactivateUser);
 
 module.exports = router;
