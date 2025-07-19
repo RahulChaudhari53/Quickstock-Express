@@ -110,7 +110,7 @@ const getAllProducts = async (req, res, next) => {
   try {
     const {
       page = 1,
-      limit = 10,
+      limit = 1000,
       sortBy = "createdAt",
       sortOrder = "desc",
       search,
@@ -260,7 +260,7 @@ const getAllProducts = async (req, res, next) => {
     ]);
 
     const pagination = {
-      page: parsedPage,
+      currentPage: parsedPage, // currentpage in fronend but here was page
       limit: parsedLimit,
       totalItems,
       totalPages,
@@ -370,6 +370,8 @@ const updateProduct = async (req, res, next) => {
 
 // DELETE /api/products/product/delete/:productId - Soft delete (deactivate) product
 const deleteProduct = async (req, res, next) => {
+  console.log("Deleting product with ID:", req.params.productId);
+  console.log("Request body:", req.body);
   const { productId } = req.params;
   try {
     const product = await Product.findById(productId);
