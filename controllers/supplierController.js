@@ -8,8 +8,7 @@ const createSupplier = async (req, res, next) => {
   try {
     const supplierData = req.body;
     console.log("Creating supplier with data:", supplierData);
-    console.log("Req body:", req.body); 
-    // was sending "text" instead of "application/json" in Postman
+    console.log("Req body:", req.body);
     const authenticatedUserId = req.user._id;
 
     if (supplierData.email) {
@@ -100,7 +99,7 @@ const getAllSuppliers = async (req, res, next) => {
     const responsePayload = {
       data: suppliers,
       pagination: {
-        page: parsedPage,
+        currentPage: parsedPage,
         limit: parsedLimit,
         totalItems,
         totalPages,
@@ -138,7 +137,6 @@ const getSupplierById = async (req, res, next) => {
   }
 };
 
-// PATCH /api/suppliers/supplier/update/:supplierId - Update a supplier by ID
 const updateSupplier = async (req, res, next) => {
   const { supplierId } = req.params;
   const updateData = req.body;
@@ -147,6 +145,17 @@ const updateSupplier = async (req, res, next) => {
     const existingSupplier = await Supplier.findById(supplierId);
     if (!existingSupplier) {
       return errorResponse(res, "Supplier not found.", 404);
+    }
+
+    // Check if data is actually changed
+    const isSameData =
+      (!updateData.name || updateData.name === existingSupplier.name) &&
+      (!updateData.email || updateData.email === existingSupplier.email) &&
+      (!updateData.phone || updateData.phone === existingSupplier.phone) &&
+      (!updateData.notes || updateData.notes === existingSupplier.notes);
+
+    if (isSameData) {
+      return successResponse(res, "No changes detected.", existingSupplier);
     }
 
     if (updateData.email && updateData.email !== existingSupplier.email) {
@@ -166,7 +175,7 @@ const updateSupplier = async (req, res, next) => {
     if (updateData.phone && updateData.phone !== existingSupplier.phone) {
       const duplicatePhone = await Supplier.findOne({
         phone: updateData.phone,
-        _id: { $ne: id },
+        _id: { $ne: supplierId },
       });
       if (duplicatePhone) {
         return errorResponse(
@@ -177,10 +186,14 @@ const updateSupplier = async (req, res, next) => {
       }
     }
 
-    const updatedSupplier = await Supplier.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const updatedSupplier = await Supplier.findByIdAndUpdate(
+      supplierId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     return successResponse(
       res,
