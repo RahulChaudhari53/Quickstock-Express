@@ -172,7 +172,7 @@ const getAllSales = async (req, res, next) => {
     const data = {
       items: sales,
       pagination: {
-        page: parsedPage,
+        currentPage: parsedPage,
         limit: parsedLimit,
         totalItems: total,
         totalPages,
