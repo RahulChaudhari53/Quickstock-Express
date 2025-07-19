@@ -125,7 +125,7 @@ const getAllPurchases = async (req, res, next) => {
   }
 
   if (search) {
-    query.$or = [{ purchaseNumber: { $regex: search, $options: "i" } }];
+    query.purchaseNumber = { $regex: search, $options: "i" };
   }
 
   const parsedPage = parseInt(page, 10);
@@ -148,7 +148,7 @@ const getAllPurchases = async (req, res, next) => {
     const data = {
       items: purchases,
       pagination: {
-        page: parsedPage,
+        currentPage: parsedPage,
         limit: parsedLimit,
         totalItems: total,
         totalPages,
@@ -256,6 +256,11 @@ const updatePurchase = async (req, res, next) => {
         }
         item.totalCost = item.quantity * item.unitCost;
       }
+
+      updateData.totalAmount = updateData.items.reduce(
+        (sum, item) => sum + item.totalCost,
+        0
+      );
     }
 
     const updatedPurchase = await Purchase.findByIdAndUpdate(
