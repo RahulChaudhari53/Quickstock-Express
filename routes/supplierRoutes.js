@@ -13,7 +13,6 @@ const {
   authenticateUser,
   isOwner,
 } = require("../middlewares/authenticateUser");
-const { create } = require("../models/Supplier");
 
 router.use(authenticateUser, isOwner);
 
