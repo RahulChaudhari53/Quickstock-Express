@@ -57,8 +57,23 @@ const getAllStock = async (req, res, next) => {
     const skip = (parsedPage - 1) * parsedLimit;
     const sortOptions = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
 
+    // const stocks = await Stock.find(query)
+    //   .populate("product", "name sku sellingPrice purchasePrice unit category")
+    //   .sort(sortOptions)
+    //   .skip(skip)
+    //   .limit(parsedLimit)
+    //   .lean();
+
+    // 
     const stocks = await Stock.find(query)
-      .populate("product", "name sku sellingPrice purchasePrice unit category")
+      .populate({
+        path: "product",
+        select: "name sku category minStockLevel",
+        populate: {
+          path: "category",
+          select: "name",
+        },
+      })
       .sort(sortOptions)
       .skip(skip)
       .limit(parsedLimit)
@@ -70,7 +85,7 @@ const getAllStock = async (req, res, next) => {
     const data = {
       items: stocks,
       pagination: {
-        page: parsedPage,
+        currentPage: parsedPage,
         limit: parsedLimit,
         totalItems: total,
         totalPages,
@@ -128,7 +143,7 @@ const getStockMovement = async (req, res, next) => {
     const data = {
       history: history,
       pagination: {
-        page: parsedPage,
+        currentPage: parsedPage,
         limit: parsedLimit,
         totalItems: totalMovements,
         totalPages,
