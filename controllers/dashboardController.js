@@ -6,17 +6,18 @@ const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 const getDashboardOverview = async (req, res, next) => {
   try {
+    const authenticatedUserId = req.user._id;
     const { startDate, endDate } = req.query;
 
+    // Default to the last 30 days
     const start = startDate
       ? new Date(startDate)
       : new Date(new Date().setDate(new Date().getDate() - 30));
     const end = endDate ? new Date(endDate) : new Date();
 
-    // Use Promise.all to run database queries concurrently for better performance
     const [stockMetrics, salesOrders, purchaseOrders, activeSuppliers] =
       await Promise.all([
-        // 1. Aggregate core inventory metrics in one efficient query
+        // 1. aggregating core inventory metrics scoped to user
         Stock.aggregate([
           {
             $lookup: {
@@ -27,7 +28,12 @@ const getDashboardOverview = async (req, res, next) => {
             },
           },
           { $unwind: "$productInfo" },
-          { $match: { "productInfo.isActive": true } },
+          {
+            $match: {
+              "productInfo.createdBy": authenticatedUserId,
+              "productInfo.isActive": true,
+            },
+          },
           {
             $group: {
               _id: null,
@@ -66,9 +72,14 @@ const getDashboardOverview = async (req, res, next) => {
           },
         ]),
 
-        // 2. Aggregate sales data for the period
+        // 2. Aggregate sales data for the period scoped to user
         Sale.aggregate([
-          { $match: { saleDate: { $gte: start, $lte: end } } },
+          {
+            $match: {
+              createdBy: authenticatedUserId,
+              saleDate: { $gte: start, $lte: end },
+            },
+          },
           {
             $group: {
               _id: null,
@@ -78,9 +89,14 @@ const getDashboardOverview = async (req, res, next) => {
           },
         ]),
 
-        // 3. Aggregate purchase data for the period
+        // 3. Aggregate purchase data
         Purchase.aggregate([
-          { $match: { orderDate: { $gte: start, $lte: end } } },
+          {
+            $match: {
+              createdBy: authenticatedUserId,
+              orderDate: { $gte: start, $lte: end },
+            },
+          },
           {
             $group: {
               _id: null,
@@ -91,7 +107,10 @@ const getDashboardOverview = async (req, res, next) => {
         ]),
 
         // 4. Count active suppliers
-        Supplier.countDocuments({ isActive: true }),
+        Supplier.countDocuments({
+          createdBy: authenticatedUserId,
+          isActive: true,
+        }),
       ]);
 
     // Extract results and provide default values if no data exists
@@ -99,7 +118,7 @@ const getDashboardOverview = async (req, res, next) => {
     const salesResults = salesOrders[0] || {};
     const purchaseResults = purchaseOrders[0] || {};
 
-    // Structure the final response object
+    // final response
     const overview = {
       totalStockItems: stockResults.totalStockItems || 0,
       inventoryPurchaseValue: stockResults.inventoryPurchaseValue || 0,
