@@ -29,7 +29,7 @@ const saleSchema = new mongoose.Schema(
     invoiceNumber: {
       type: String,
       // required: true,
-      unique: true,
+      // unique: true,
       trim: true,
       uppercase: true,
     },
@@ -64,6 +64,9 @@ const saleSchema = new mongoose.Schema(
   }
 );
 
+// Add a compound index for user-specific uniqueness on invoiceNumber
+saleSchema.index({ invoiceNumber: 1, createdBy: 1 }, { unique: true });
+
 // Pre-save hook to calculate totalAmount and auto-generate invoiceNumber
 saleSchema.pre("save", async function (next) {
   this.totalAmount = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -71,8 +74,8 @@ saleSchema.pre("save", async function (next) {
   if (this.isNew && !this.invoiceNumber) {
     try {
       const lastSale = await this.constructor
-        .findOne({}, { invoiceNumber: 1 })
-        .sort({ invoiceNumber: -1 })
+        .findOne({ createdBy: this.createdBy }, { invoiceNumber: 1 })
+        .sort({ createdAt: -1 })
         .exec();
 
       let nextNumber = 1;
