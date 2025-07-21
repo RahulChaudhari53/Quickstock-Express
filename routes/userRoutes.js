@@ -5,6 +5,9 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
   getCurrentUser,
   updateUserInfo,
   updatePassword,
@@ -21,9 +24,14 @@ const {
   isSelf,
 } = require("../middlewares/authenticateUser");
 
+const handleMulterError = require("../middlewares/multerErrorHandler");
+
 // Public routes
 router.post("/signup", registerUser);
 router.post("/login", loginUser);
+router.post("/forgotPassword", forgotPassword);
+router.post("/verify-otp", verifyOtp);
+router.post("/resetPassword", resetPassword);
 
 // Protected routes
 router.use(authenticateUser);
@@ -37,7 +45,7 @@ router.patch("/updateEmail/:userId", isSelf, updateEmail);
 router.patch(
   "/updateProfileImage/:userId",
   isSelf,
-  upload.single("profileImage"),
+  handleMulterError(upload, "profileImage"),
   updateProfileImage
 );
 router.patch("/addPhoneNumber/:userId", isSelf, addPhoneNumber);
