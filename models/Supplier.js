@@ -14,7 +14,7 @@ const supplierSchema = new mongoose.Schema(
       type: String,
       required: true,
       lowercase: true,
-      unique: true,
+      // unique: true,
       trim: true,
       match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
@@ -22,7 +22,7 @@ const supplierSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
+      // unique: true,
       validate: {
         validator: function (v) {
           return /^\d{10}$/.test(v);
@@ -52,6 +52,9 @@ const supplierSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+supplierSchema.index({ email: 1, createdBy: 1 }, { unique: true });
+supplierSchema.index({ phone: 1, createdBy: 1 }, { unique: true });
 
 const Supplier =
   mongoose.models.Supplier || mongoose.model("Supplier", supplierSchema);

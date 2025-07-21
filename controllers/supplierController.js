@@ -7,14 +7,14 @@ const { successResponse, errorResponse } = require("../utils/responseHandler");
 const createSupplier = async (req, res, next) => {
   try {
     const supplierData = req.body;
-    console.log("Creating supplier with data:", supplierData);
-    console.log("Req body:", req.body);
     const authenticatedUserId = req.user._id;
 
     if (supplierData.email) {
       const existingEmail = await Supplier.findOne({
         email: supplierData.email,
+        createdBy: authenticatedUserId,
       });
+
       if (existingEmail) {
         return errorResponse(
           res,
@@ -26,6 +26,7 @@ const createSupplier = async (req, res, next) => {
     if (supplierData.phone) {
       const existingPhone = await Supplier.findOne({
         phone: supplierData.phone,
+        createdBy: authenticatedUserId,
       });
       if (existingPhone) {
         return errorResponse(
@@ -58,6 +59,8 @@ const createSupplier = async (req, res, next) => {
 // GET /api/suppliers - Get all suppliers with pagination and filtering
 const getAllSuppliers = async (req, res, next) => {
   try {
+    const authenticatedUserId = req.user._id;
+
     const {
       page = 1,
       limit = 10,
@@ -71,7 +74,7 @@ const getAllSuppliers = async (req, res, next) => {
     const parsedLimit = parseInt(limit);
     const skip = (parsedPage - 1) * parsedLimit;
 
-    const filter = {};
+    const filter = { createdBy: authenticatedUserId };
     if (search) {
       const searchRegex = new RegExp(search, "i");
       filter.$or = [
@@ -122,9 +125,13 @@ const getAllSuppliers = async (req, res, next) => {
 // GET /api/suppliers/supplier/:supplierId - Get a single supplier by ID
 const getSupplierById = async (req, res, next) => {
   const { supplierId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const supplier = await Supplier.findById(supplierId).lean();
+    const supplier = await Supplier.findOne({
+      _id: supplierId,
+      createdBy: authenticatedUserId,
+    }).lean();
 
     if (!supplier) {
       return errorResponse(res, "Supplier not found.", 404);
@@ -140,9 +147,13 @@ const getSupplierById = async (req, res, next) => {
 const updateSupplier = async (req, res, next) => {
   const { supplierId } = req.params;
   const updateData = req.body;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const existingSupplier = await Supplier.findById(supplierId);
+    const existingSupplier = await Supplier.findOne({
+      _id: supplierId,
+      createdBy: authenticatedUserId,
+    });
     if (!existingSupplier) {
       return errorResponse(res, "Supplier not found.", 404);
     }
@@ -158,42 +169,48 @@ const updateSupplier = async (req, res, next) => {
       return successResponse(res, "No changes detected.", existingSupplier);
     }
 
-    if (updateData.email && updateData.email !== existingSupplier.email) {
+    if (updateData.email) {
       const duplicateEmail = await Supplier.findOne({
         email: updateData.email,
+        createdBy: authenticatedUserId,
         _id: { $ne: supplierId },
       });
       if (duplicateEmail) {
         return errorResponse(
           res,
-          "Supplier with this email already exists.",
+          "You already have a supplier with this email.",
           409
         );
       }
     }
-
-    if (updateData.phone && updateData.phone !== existingSupplier.phone) {
+    if (updateData.phone) {
       const duplicatePhone = await Supplier.findOne({
         phone: updateData.phone,
+        createdBy: authenticatedUserId,
         _id: { $ne: supplierId },
       });
       if (duplicatePhone) {
         return errorResponse(
           res,
-          "Supplier with this phone number already exists.",
+          "You already have a supplier with this phone number.",
           409
         );
       }
     }
 
-    const updatedSupplier = await Supplier.findByIdAndUpdate(
-      supplierId,
+    const updatedSupplier = await Supplier.findOneAndUpdate(
+      { _id: supplierId, createdBy: authenticatedUserId },
       updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
+      { new: true, runValidators: true }
     );
+
+    if (!updatedSupplier) {
+      return errorResponse(
+        res,
+        "Supplier not found or you lack permission.",
+        404
+      );
+    }
 
     return successResponse(
       res,
@@ -209,9 +226,15 @@ const updateSupplier = async (req, res, next) => {
 // PATCH /api/suppliers/supplier/deactivate/:supplierId - Deactivate a supplier by ID
 const deactivateSupplier = async (req, res, next) => {
   const { supplierId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const supplier = await Supplier.findById(supplierId);
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: supplierId, createdBy: authenticatedUserId, isActive: true },
+      { isActive: false },
+      { new: true }
+    );
+
     if (!supplier) {
       return errorResponse(res, "Supplier not found.", 404);
     }
@@ -233,9 +256,15 @@ const deactivateSupplier = async (req, res, next) => {
 // PATCH /api/suppliers/supplier/activate/:supplierId - Activate a supplier by ID
 const activateSupplier = async (req, res, next) => {
   const { supplierId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const supplier = await Supplier.findById(supplierId);
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: supplierId, createdBy: authenticatedUserId, isActive: false },
+      { isActive: true },
+      { new: true }
+    );
+
     if (!supplier) {
       return errorResponse(res, "Supplier not found.", 404);
     }
