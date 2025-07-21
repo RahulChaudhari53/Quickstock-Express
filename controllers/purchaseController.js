@@ -8,6 +8,8 @@ const mongoose = require("mongoose");
 
 // POST /api/purchases - Create a new purchase
 const createPurchase = async (req, res, next) => {
+  const authenticatedUserId = req.user._id;
+
   try {
     const purchaseData = {
       ...req.body,
@@ -19,7 +21,10 @@ const createPurchase = async (req, res, next) => {
     if (!supplierId) {
       return errorResponse(res, "Supplier is required.", 400);
     }
-    const supplier = await Supplier.findById(supplierId);
+    const supplier = await Supplier.findOne({
+      _id: supplierId,
+      createdBy: authenticatedUserId,
+    });
     if (!supplier || !supplier.isActive) {
       return errorResponse(res, "Invalid or inactive supplier provided.", 400);
     }
@@ -55,7 +60,10 @@ const createPurchase = async (req, res, next) => {
         );
       }
 
-      const product = await Product.findById(item.product);
+      const product = await Product.findOne({
+        _id: item.product,
+        createdBy: authenticatedUserId,
+      });
       if (!product || !product.isActive) {
         return errorResponse(
           res,
@@ -97,6 +105,8 @@ const createPurchase = async (req, res, next) => {
 
 // GET /api/purchases - Get all purchases
 const getAllPurchases = async (req, res, next) => {
+  const authenticatedUserId = req.user._id;
+
   const {
     page = 1,
     limit = 10,
@@ -109,7 +119,7 @@ const getAllPurchases = async (req, res, next) => {
     search,
   } = req.query;
 
-  const query = {};
+  const query = { createdBy: authenticatedUserId };
 
   if (supplier) query.supplier = new mongoose.Types.ObjectId(supplier);
   if (purchaseStatus) query.purchaseStatus = purchaseStatus;
@@ -167,9 +177,13 @@ const getAllPurchases = async (req, res, next) => {
 // GET /api/purchases/purchase/:purchaseId - Get purchase by ID
 const getPurchaseById = async (req, res, next) => {
   const { purchaseId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const purchase = await Purchase.findById(purchaseId)
+    const purchase = await Purchase.findOne({
+      _id: purchaseId,
+      createdBy: authenticatedUserId,
+    })
       .populate("supplier", "name contactPerson phone email address")
       .populate("items.product", "name sku unit")
       .lean();
@@ -189,9 +203,13 @@ const getPurchaseById = async (req, res, next) => {
 const updatePurchase = async (req, res, next) => {
   const { purchaseId } = req.params;
   const updateData = req.body;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const purchase = await Purchase.findById(purchaseId);
+    const purchase = await Purchase.findOne({
+      _id: purchaseId,
+      createdBy: authenticatedUserId,
+    });
     if (!purchase) {
       return errorResponse(res, "Purchase not found.", 404);
     }
@@ -220,7 +238,10 @@ const updatePurchase = async (req, res, next) => {
       updateData.supplier &&
       updateData.supplier.toString() !== purchase.supplier.toString()
     ) {
-      const supplier = await Supplier.findById(updateData.supplier);
+      const supplier = await Supplier.findOne({
+        _id: updateData.supplier,
+        createdBy: authenticatedUserId,
+      });
       if (!supplier || !supplier.isActive) {
         return errorResponse(
           res,
@@ -246,7 +267,10 @@ const updatePurchase = async (req, res, next) => {
             400
           );
         }
-        const product = await Product.findById(item.product);
+        const product = await Product.findOne({
+          _id: item.product,
+          createdBy: authenticatedUserId,
+        });
         if (!product || !product.isActive) {
           return errorResponse(
             res,
@@ -289,9 +313,13 @@ const updatePurchase = async (req, res, next) => {
 // PATCH /api/purchases/purchase/cancel/:purchaseId - Cancel a purchase
 const cancelPurchase = async (req, res, next) => {
   const { purchaseId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const purchase = await Purchase.findById(purchaseId);
+    const purchase = await Purchase.findOne({
+      _id: purchaseId,
+      createdBy: authenticatedUserId,
+    });
     if (!purchase) {
       return errorResponse(res, "Purchase not found.", 404);
     }
@@ -316,30 +344,31 @@ const cancelPurchase = async (req, res, next) => {
 // PATCH /api/purchases/purchase/receive:purchaseId - Receive purchase and update stock
 const receivePurchase = async (req, res, next) => {
   const { purchaseId } = req.params;
+  const authenticatedUserId = req.user._id;
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const purchase = await Purchase.findById(purchaseId).session(session);
+    const purchase = await Purchase.findOne({
+      _id: purchaseId,
+      createdBy: authenticatedUserId,
+    }).session(session);
+
     if (!purchase) {
       await session.abortTransaction();
       session.endSession();
       return errorResponse(res, "Purchase not found.", 404);
     }
 
-    if (purchase.purchaseStatus === "received") {
+    if (purchase.purchaseStatus !== "ordered") {
       await session.abortTransaction();
       session.endSession();
       return errorResponse(
         res,
-        "Purchase has already been fully received.",
+        `Cannot receive a purchase that is already ${purchase.purchaseStatus}.`,
         400
       );
-    }
-    if (purchase.purchaseStatus === "cancelled") {
-      await session.abortTransaction();
-      session.endSession();
-      return errorResponse(res, "Cannot receive a cancelled purchase.", 400);
     }
 
     for (const item of purchase.items) {
