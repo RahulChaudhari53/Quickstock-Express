@@ -1,7 +1,18 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+const { generateOTP } = require("../utils/optUtils");
 const { successResponse, errorResponse } = require("../utils/responseHandler");
+
+// function for gmail smtp
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // POST /api/users/signup
 const registerUser = async (req, res, next) => {
@@ -103,6 +114,145 @@ const loginUser = async (req, res, next) => {
       token,
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/users/forgotPassword - Send reset password email
+const forgotPassword = async (req, res, next) => {
+  console.log("Forgot Password Request:", req.body);
+  const { email } = req.body;
+
+  if (!email) {
+    return errorResponse(res, "Email is required.", 400);
+  }
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return successResponse(
+        res,
+        "If an account with this email exists, an OTP has been sent."
+      );
+    }
+
+    const otp = generateOTP();
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    // const resetToken = jwt.sing({ id: user._id }, process.end.JWT_SECRET, {
+    //   expiresIn: "1h",
+    // });
+    // const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    // email_template = `<p>Hi ${user.firstName},</p>
+    //  <p>You requested a password reset. Click the link below to reset your password:</p>
+    //  <a href="${resetUrl}">Reset Password</a>
+    //  <p>If you did not request this, please ignore this email.</p>
+    //  <p>Thank you!</p>`
+
+    const otp_html = `<p>Hi ${user.firstName},</p>
+             <p>You requested a password reset. Your OTP is: <strong>${otp}</strong></p>
+             <p>This OTP is valid for 10 minutes. </p>
+             <p>If you did not request this, please ignore this email.</p>
+             <p>Thank you!</p>`;
+
+    const mailOptions = {
+      from: `"QuickStock"<${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Password Reset Request",
+      html: otp_html,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent:", info.response);
+
+    const temp_opt_token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: "10m",
+    });
+
+    return successResponse(res, "OTP email sent successfully.", {
+      temp_opt_token,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/users/verify-otp - Verify OTP for password reset
+const verifyOtp = async (req, res, next) => {
+  console.log("Verify OTP Request:", req.body);
+  const { otp } = req.body;
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!otp || !token) {
+    return errorResponse(res, "OTP and token are required.", 400);
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const email = decoded.email;
+
+    const user = await User.findOne({ email }).select("+otp +otpExpires");
+
+    if (!user) return errorResponse(res, "User not found.", 404);
+    if (!user.otp || user.otp !== otp)
+      return errorResponse(res, "Invalid OTP.", 400);
+    if (user.otpExpires < Date.now())
+      return errorResponse(res, "OTP has expired.", 400);
+
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    // single-use token for the actual reset.
+    const reset_token = jwt.sign(
+      { email: user.email, purpose: "password-reset" },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    return successResponse(res, "OTP verified successfully.", { reset_token });
+  } catch (err) {
+    console.error("Error verifying OTP:", err);
+    next(err);
+  }
+};
+
+// POST /api/users/resetPassword - Reset user password
+const resetPassword = async (req, res, next) => {
+  const { newPassword } = req.body;
+  const token = req.headers.authorization?.split(" ")[1]; // This should be the 'reset_token'
+
+  if (!newPassword || !token) {
+    return errorResponse(res, "New password and token are required.", 400);
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.purpose !== "password-reset") {
+      return errorResponse(res, "Invalid token purpose.", 403);
+    }
+    const email = decoded.email;
+
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) {
+      return errorResponse(res, "User not found.", 404);
+    }
+
+    user.password = newPassword;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    console.log("Password reset successfully for user:", user._id);
+    return successResponse(res, "Password reset successfully.");
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return errorResponse(res, "Reset token has expired.", 400);
+    }
+    console.error("Error resetting password:", err);
     next(err);
   }
 };
@@ -323,6 +473,9 @@ const deactivateUser = async (req, res, next) => {
 module.exports = {
   registerUser,
   loginUser,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
   getCurrentUser,
   updateUserInfo,
   updatePassword,
