@@ -1,4 +1,5 @@
 // controllers/categoryController.js
+const mongoose = require("mongoose");
 const Category = require("../models/Category");
 const { successResponse, errorResponse } = require("../utils/responseHandler");
 
@@ -10,6 +11,7 @@ const createCategory = async (req, res, next) => {
   try {
     const existingCategory = await Category.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
+      createdBy: authenticatedUserId,
     });
 
     if (existingCategory) {
@@ -39,6 +41,8 @@ const createCategory = async (req, res, next) => {
 // GET /api/categories - Get all categories with pagination and filtering
 const getAllCategories = async (req, res, next) => {
   try {
+    const authenticatedUserId = req.user._id;
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const sortBy = req.query.sortBy || "createdAt";
@@ -46,7 +50,7 @@ const getAllCategories = async (req, res, next) => {
 
     const { search, nameExact, isActive } = req.query;
 
-    const filter = {};
+    const filter = { createdBy: authenticatedUserId };
 
     if (isActive !== undefined) {
       filter.isActive = isActive === "true";
@@ -91,9 +95,17 @@ const getAllCategories = async (req, res, next) => {
 // GET /api/categories/category/:categoryId - Get a single category by ID
 const getCategoryById = async (req, res, next) => {
   const { categoryId } = req.params;
+  const authenticatedUserId = req.user._id;
+
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    return errorResponse(res, "Invalid category ID format.", 400);
+  }
 
   try {
-    const category = await Category.findById(categoryId).lean();
+    const category = await Category.findOne({
+      _id: categoryId,
+      createdBy: authenticatedUserId,
+    }).lean();
 
     if (!category) {
       return errorResponse(res, "Category not found.", 404);
@@ -109,15 +121,20 @@ const getCategoryById = async (req, res, next) => {
 // DELETE /api/categories/category/deactivate:categoryId - Soft delete a category by ID
 const deleteCategory = async (req, res, next) => {
   const { categoryId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const category = await Category.findById(categoryId);
+    const category = await Category.findOne({
+      _id: categoryId,
+      createdBy: authenticatedUserId,
+    });
+
     if (!category) {
       return errorResponse(res, "Category not found.", 404);
     }
 
-    await Category.findByIdAndUpdate(
-      categoryId,
+    await Category.findOneAndUpdate(
+      { _id: categoryId, createdBy: authenticatedUserId, isActive: true },
       { isActive: false },
       { new: true }
     );
@@ -132,9 +149,14 @@ const deleteCategory = async (req, res, next) => {
 // PATCH /api/categories/category/activate/:categoryId - Reactivate a category
 const activateCategory = async (req, res, next) => {
   const { categoryId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const category = await Category.findById(categoryId);
+    const category = await Category.findOne({
+      _id: categoryId,
+      createdBy: authenticatedUserId,
+    });
+
     if (!category) {
       return errorResponse(res, "Category not found.", 404);
     }
@@ -143,8 +165,8 @@ const activateCategory = async (req, res, next) => {
       return errorResponse(res, "Category is already active.", 400);
     }
 
-    const updatedCategory = await Category.findByIdAndUpdate(
-      categoryId,
+    const updatedCategory = await Category.findOneAndUpdate(
+      { _id: categoryId, createdBy: authenticatedUserId, isActive: true },
       { isActive: true },
       { new: true, runValidators: true }
     );
