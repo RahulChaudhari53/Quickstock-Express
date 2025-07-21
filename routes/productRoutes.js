@@ -8,7 +8,7 @@ const {
   updateProduct,
   deleteProduct,
   activateProduct,
-  getProductsByCategory,
+  // getProductsByCategory,
 } = require("../controllers/productController");
 
 const {
@@ -23,6 +23,6 @@ router.get("/product/:productId", getProductById);
 router.patch("/product/update/:productId", updateProduct);
 router.delete("/product/deactivate/:productId", deleteProduct);
 router.patch("/product/activate/:productId", activateProduct);
-router.get("/category/:categoryId", getProductsByCategory);
+// router.get("/category/:categoryId", getProductsByCategory);
 
 module.exports = router;
