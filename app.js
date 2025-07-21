@@ -13,6 +13,7 @@ const supplierRoutes = require("./routes/supplierRoutes");
 const purchaseRoutes = require("./routes/purchaseRoutes");
 const saleRoutes = require("./routes/saleRoutes");
 const stockRoutes = require("./routes/stockRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/suppliers", supplierRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/sales", saleRoutes);
 app.use("/api/stocks", stockRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Global Error Handler:", err);

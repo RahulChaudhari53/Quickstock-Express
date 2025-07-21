@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-
 const Product = require("../models/Product");
 const Stock = require("../models/Stock");
 const Category = require("../models/Category");
@@ -125,12 +124,16 @@ const getAllProducts = async (req, res, next) => {
       unit,
     } = req.query;
 
+    const authenticatedUserId = req.user._id;
+
     const parsedPage = parseInt(page);
     const parsedLimit = parseInt(limit);
 
     const skip = (parsedPage - 1) * parsedLimit;
     const pipeline = [];
-    const matchStage = {};
+    const matchStage = {
+      createdBy: new mongoose.Types.ObjectId(authenticatedUserId),
+    };
 
     if (search) {
       matchStage.$or = [
@@ -281,9 +284,17 @@ const getAllProducts = async (req, res, next) => {
 // GET /api/products/product/:productId - Get product by ID
 const getProductById = async (req, res, next) => {
   const { productId } = req.params;
+  const authenticatedUserId = req.user._id;
+
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return errorResponse(res, "Invalid product ID format.", 400);
+  }
 
   try {
-    const product = await Product.findById(productId)
+    const product = await Product.findOne({
+      _id: productId,
+      createdBy: authenticatedUserId,
+    })
       .populate("supplier", "name contactPerson phone email")
       .populate("category", "name description")
       .lean();
@@ -306,9 +317,13 @@ const getProductById = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
   const { productId } = req.params;
   const updateData = req.body;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({
+      _id: productId,
+      createdBy: authenticatedUserId,
+    });
     if (!product) {
       return errorResponse(res, "Product not found.", 404);
     }
@@ -346,8 +361,8 @@ const updateProduct = async (req, res, next) => {
       }
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: productId, createdBy: authenticatedUserId },
       updateData,
       {
         new: true,
@@ -356,6 +371,14 @@ const updateProduct = async (req, res, next) => {
     )
       .populate("supplier", "name contactPerson phone email")
       .populate("category", "name description");
+
+    if (!updatedProduct) {
+      return errorResponse(
+        res,
+        "Product not found or you do not have permission to update it.",
+        404
+      );
+    }
 
     return successResponse(
       res,
@@ -368,13 +391,16 @@ const updateProduct = async (req, res, next) => {
   }
 };
 
-// DELETE /api/products/product/delete/:productId - Soft delete (deactivate) product
+// DELETE /api/products/product/deactivate/:productId - Soft delete (deactivate) product
 const deleteProduct = async (req, res, next) => {
-  console.log("Deleting product with ID:", req.params.productId);
-  console.log("Request body:", req.body);
   const { productId } = req.params;
+  const authenticatedUserId = req.user._id;
+
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({
+      _id: productId,
+      createdBy: authenticatedUserId,
+    });
     if (!product) {
       return errorResponse(res, "Product not found.", 404);
     }
@@ -382,11 +408,20 @@ const deleteProduct = async (req, res, next) => {
       return errorResponse(res, "Product is already inactive.", 400);
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: productId, createdBy: authenticatedUserId, isActive: true },
       { isActive: false },
       { new: true }
     );
+
+    if (!updatedProduct) {
+      return errorResponse(
+        res,
+        "Product not found, is already inactive, or you lack permissions.",
+        404
+      );
+    }
+
     return successResponse(
       res,
       "Product deactivated successfully.",
@@ -401,9 +436,13 @@ const deleteProduct = async (req, res, next) => {
 // PATCH /api/products/product/activate/:productId - Reactivate a product
 const activateProduct = async (req, res, next) => {
   const { productId } = req.params;
+  const authenticatedUserId = req.user._id;
 
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({
+      _id: productId,
+      createdBy: authenticatedUserId,
+    });
     if (!product) {
       return errorResponse(res, "Product not found.", 404);
     }
@@ -411,11 +450,20 @@ const activateProduct = async (req, res, next) => {
       return errorResponse(res, "Product is already active.", 400);
     }
 
-    const activatedProduct = await Product.findByIdAndUpdate(
-      productId,
+    const activatedProduct = await Product.findOneAndUpdate(
+      { _id: productId, createdBy: authenticatedUserId, isActive: false },
       { isActive: true },
       { new: true, runValidators: true }
     );
+
+    if (!activatedProduct) {
+      return errorResponse(
+        res,
+        "Product not found, is already active, or you lack permissions.",
+        404
+      );
+    }
+
     return successResponse(
       res,
       "Product activated successfully.",
@@ -427,60 +475,60 @@ const activateProduct = async (req, res, next) => {
   }
 };
 
-// GET /api/products/category/:categoryId - Get products by category
-const getProductsByCategory = async (req, res, next) => {
-  const { categoryId } = req.params;
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "name",
-    sortOrder = "asc",
-  } = req.query;
+// // GET /api/products/category/:categoryId - Get products by category
+// const getProductsByCategory = async (req, res, next) => {
+//   const { categoryId } = req.params;
+//   const {
+//     page = 1,
+//     limit = 10,
+//     sortBy = "name",
+//     sortOrder = "asc",
+//   } = req.query;
 
-  const parsedPage = parseInt(page);
-  const parsedLimit = parseInt(limit);
+//   const parsedPage = parseInt(page);
+//   const parsedLimit = parseInt(limit);
 
-  const skip = (parsedPage - 1) * parsedLimit;
-  const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1 };
+//   const skip = (parsedPage - 1) * parsedLimit;
+//   const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1 };
 
-  try {
-    const existingCategory = await Category.findById(categoryId);
-    if (!existingCategory || !existingCategory.isActive) {
-      return errorResponse(res, "Category not found or is inactive.", 404);
-    }
+//   try {
+//     const existingCategory = await Category.findById(categoryId);
+//     if (!existingCategory || !existingCategory.isActive) {
+//       return errorResponse(res, "Category not found or is inactive.", 404);
+//     }
 
-    const filter = { category: categoryId, isActive: true };
+//     const filter = { category: categoryId, isActive: true };
 
-    const [products, total] = await Promise.all([
-      Product.find(filter)
-        .populate("supplier", "name contactPerson phone email")
-        .populate("category", "name description")
-        .sort(sort)
-        .skip(skip)
-        .limit(parsedLimit)
-        .lean(),
-      Product.countDocuments(filter),
-    ]);
+//     const [products, total] = await Promise.all([
+//       Product.find(filter)
+//         .populate("supplier", "name contactPerson phone email")
+//         .populate("category", "name description")
+//         .sort(sort)
+//         .skip(skip)
+//         .limit(parsedLimit)
+//         .lean(),
+//       Product.countDocuments(filter),
+//     ]);
 
-    const totalPages = Math.ceil(total / parsedLimit);
-    const pagination = {
-      page: parsedPage,
-      limit: parsedLimit,
-      totalItems: total,
-      totalPages,
-      hasNextPage: parsedPage < totalPages,
-      hasPrevPage: parsedPage > 1,
-    };
+//     const totalPages = Math.ceil(total / parsedLimit);
+//     const pagination = {
+//       page: parsedPage,
+//       limit: parsedLimit,
+//       totalItems: total,
+//       totalPages,
+//       hasNextPage: parsedPage < totalPages,
+//       hasPrevPage: parsedPage > 1,
+//     };
 
-    return successResponse(res, "Products retrieved successfully.", {
-      products: products,
-      pagination: pagination,
-    });
-  } catch (err) {
-    console.error("Error fetching products by category:", err);
-    next(err);
-  }
-};
+//     return successResponse(res, "Products retrieved successfully.", {
+//       products: products,
+//       pagination: pagination,
+//     });
+//   } catch (err) {
+//     console.error("Error fetching products by category:", err);
+//     next(err);
+//   }
+// };
 
 module.exports = {
   createProduct,
@@ -489,5 +537,5 @@ module.exports = {
   updateProduct,
   deleteProduct,
   activateProduct,
-  getProductsByCategory,
+  // getProductsByCategory,
 };

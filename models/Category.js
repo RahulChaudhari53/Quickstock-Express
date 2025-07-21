@@ -7,7 +7,7 @@ const categorySchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
+      // unique: true,
       minlength: 2,
       maxlength: 50,
     },
@@ -32,6 +32,8 @@ const categorySchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+categorySchema.index({ name: 1, createdBy: 1 }, { unique: true });
 
 const Category =
   mongoose.models.Category || mongoose.model("Category", categorySchema);

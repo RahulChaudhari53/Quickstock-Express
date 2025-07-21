@@ -29,7 +29,7 @@ const purchaseSchema = new mongoose.Schema(
     purchaseNumber: {
       type: String,
       // required: true,
-      unique: true,
+      // unique: true,
       trim: true,
       uppercase: true,
     },
@@ -80,6 +80,9 @@ const purchaseSchema = new mongoose.Schema(
   }
 );
 
+// for user-specific uniqueness on purchaseNumber
+purchaseSchema.index({ purchaseNumber: 1, createdBy: 1 }, { unique: true });
+
 // Pre-save hook to calculate totalAmount and auto-generate purchaseNumber
 purchaseSchema.pre("save", async function (next) {
   this.totalAmount = (this.items || []).reduce(
@@ -90,8 +93,8 @@ purchaseSchema.pre("save", async function (next) {
   if (this.isNew && !this.purchaseNumber) {
     try {
       const lastPurchase = await this.constructor
-        .findOne({}, { purchaseNumber: 1 })
-        .sort({ purchaseNumber: -1 })
+        .findOne({ createdBy: this.createdBy }, { purchaseNumber: 1 })
+        .sort({ createdAt: -1 })
         .exec();
 
       let nextNumber = 1;
