@@ -320,7 +320,10 @@ const updateProduct = async (req, res, next) => {
   const authenticatedUserId = req.user._id;
 
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({
+      _id: productId,
+      createdBy: authenticatedUserId,
+    });
     if (!product) {
       return errorResponse(res, "Product not found.", 404);
     }
@@ -394,7 +397,10 @@ const deleteProduct = async (req, res, next) => {
   const authenticatedUserId = req.user._id;
 
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({
+      _id: productId,
+      createdBy: authenticatedUserId,
+    });
     if (!product) {
       return errorResponse(res, "Product not found.", 404);
     }
@@ -433,7 +439,10 @@ const activateProduct = async (req, res, next) => {
   const authenticatedUserId = req.user._id;
 
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({
+      _id: productId,
+      createdBy: authenticatedUserId,
+    });
     if (!product) {
       return errorResponse(res, "Product not found.", 404);
     }
