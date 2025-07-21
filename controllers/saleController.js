@@ -12,14 +12,15 @@ const createSale = async (req, res, next) => {
   try {
     session.startTransaction();
 
+    const authenticatedUserId = req.user._id;
+
     const saleData = {
       ...req.body,
-      createdBy: req.user._id,
+      createdBy: authenticatedUserId,
     };
 
     const { items, paymentMethod } = saleData;
 
-    // --- INITIAL VALIDATION ---
     if (!paymentMethod) {
       await session.abortTransaction();
       return errorResponse(res, "Payment method is required.", 400);
@@ -30,7 +31,7 @@ const createSale = async (req, res, next) => {
       return errorResponse(res, "A sale must include at least one item.", 400);
     }
 
-    // --- STAGE 1: VALIDATE ALL ITEMS AND CHECK STOCK FIRST ---
+    // first validating all items and check stock
     for (const item of items) {
       if (
         !item.product ||
@@ -61,37 +62,44 @@ const createSale = async (req, res, next) => {
         );
       }
 
+      // validating product ownership first
+      const product = await Product.findOne({
+        _id: item.product,
+        createdBy: authenticatedUserId,
+      }).session(session);
+
+      if (!product || !product.isActive) {
+        await session.abortTransaction();
+        session.endSession();
+        return errorResponse(
+          res,
+          `Product not found or is inactive: ${item.product}.`,
+          400
+        );
+      }
+
+      // checking ownership after stock is confirmed
       const stock = await Stock.findOne({ product: item.product }).session(
         session
       );
 
       if (!stock || stock.currentStock < item.quantity) {
-        const product = await Product.findById(item.product)
-          .select("name")
-          .lean();
         await session.abortTransaction();
+        session.endSession();
         return errorResponse(
           res,
-          `Insufficient stock for product: ${
-            product ? product.name : "Unknown"
-          }. Available: ${stock ? stock.currentStock : 0}, Requested: ${
-            item.quantity
-          }.`,
+          `Insufficient stock for product: ${product.name}.`,
           400
         );
       }
-
-      // Calculate total price for the item. This will be used by the Sale model's pre-save hook.
       item.totalPrice = item.quantity * item.unitPrice;
     }
 
-    // --- STAGE 2: ALL CHECKS PASSED. NOW, WRITE TO THE DATABASE. ---
-
-    // Create the sale document ONCE, outside the loop.
+    // second write to database
     const sale = new Sale(saleData);
-    await sale.save({ session }); // The 'pre-save' hook calculates totalAmount and invoiceNumber.
+    await sale.save({ session });
 
-    // Loop through the items again to record all stock movements.
+    // looping through the items again to record all stock movements.
     for (const item of sale.items) {
       await Stock.recordMovement(
         item.product,
@@ -105,7 +113,6 @@ const createSale = async (req, res, next) => {
       );
     }
 
-    // Commit the transaction ONCE, after all database work is done.
     await session.commitTransaction();
     session.endSession();
 
@@ -132,8 +139,9 @@ const getAllSales = async (req, res, next) => {
     endDate,
     search,
   } = req.query;
+  const authenticatedUserId = req.user._id;
 
-  const query = {};
+  const query = { createdBy: authenticatedUserId }; // fixing the scope
 
   if (search) {
     query.invoiceNumber = { $regex: search, $options: "i" };
@@ -145,7 +153,7 @@ const getAllSales = async (req, res, next) => {
 
   if (startDate || endDate) {
     query.saleDate = {};
-    if (startDate) query.startDate = { $gte: new Date(startDate) };
+    if (startDate) query.saleDate.$gte = new Date(startDate);
     if (endDate) {
       const endOfDay = new Date(endDate);
       endOfDay.setHours(23, 59, 59, 999);
@@ -190,8 +198,13 @@ const getAllSales = async (req, res, next) => {
 // Get api/sales/sale/:saleId
 const getSaleById = async (req, res, next) => {
   const { saleId } = req.params;
+  const authenticatedUserId = req.user._id;
+
   try {
-    const sale = await Sale.findById(saleId)
+    const sale = await Sale.findOne({
+      _id: saleId,
+      createdBy: authenticatedUserId,
+    })
       .populate("items.product", "name sku unit")
       .lean();
 
@@ -208,11 +221,17 @@ const getSaleById = async (req, res, next) => {
 // DELETE api/sales/sale/cancel/:saleId - Cancel a sale, restock stock and delete sale record
 const cancelSale = async (req, res, next) => {
   const { saleId } = req.params;
+  const authenticatedUserId = req.user._id;
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const sale = await Sale.findById(saleId).session(session);
+    const sale = await Sale.findOne({
+      _id: saleId,
+      createdBy: authenticatedUserId,
+    }).session(session);
+
     if (!sale) {
       await session.abortTransaction();
       session.endSession();
@@ -234,7 +253,10 @@ const cancelSale = async (req, res, next) => {
     }
 
     // Delete the sale record itself within same transaction
-    await Sale.findByIdAndDelete(saleId).session(session);
+    await Sale.findByIdAndDelete({
+      _id: saleId,
+      createdBy: authenticatedUserId,
+    }).session(session);
 
     await session.commitTransaction();
     session.endSession();
