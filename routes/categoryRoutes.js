@@ -13,6 +13,7 @@ const {
 const {
   authenticateUser,
   isOwner,
+  isSelf,
 } = require("../middlewares/authenticateUser");
 
 router.use(authenticateUser, isOwner);
