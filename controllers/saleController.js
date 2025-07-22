@@ -1,3 +1,4 @@
+// saleController.js
 const Sale = require("../models/Sale");
 const Product = require("../models/Product");
 const Stock = require("../models/Stock");

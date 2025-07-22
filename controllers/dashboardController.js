@@ -1,3 +1,4 @@
+// dashboardController.js
 const Stock = require("../models/Stock");
 const Sale = require("../models/Sale");
 const Purchase = require("../models/Purchase");
