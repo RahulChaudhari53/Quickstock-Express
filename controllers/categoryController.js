@@ -122,6 +122,8 @@ const getCategoryById = async (req, res, next) => {
 const deleteCategory = async (req, res, next) => {
   const { categoryId } = req.params;
   const authenticatedUserId = req.user._id;
+  console.log("Starting deactivate process");
+  console.log(`For category Id: ${categoryId}`);
 
   try {
     const category = await Category.findOne({
@@ -150,6 +152,8 @@ const deleteCategory = async (req, res, next) => {
 const activateCategory = async (req, res, next) => {
   const { categoryId } = req.params;
   const authenticatedUserId = req.user._id;
+  console.error("Starting re-activate process");
+  console.log(`For category Id: ${categoryId}`);
 
   try {
     const category = await Category.findOne({
@@ -166,7 +170,7 @@ const activateCategory = async (req, res, next) => {
     }
 
     const updatedCategory = await Category.findOneAndUpdate(
-      { _id: categoryId, createdBy: authenticatedUserId, isActive: true },
+      { _id: categoryId, createdBy: authenticatedUserId },
       { isActive: true },
       { new: true, runValidators: true }
     );
