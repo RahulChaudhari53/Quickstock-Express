@@ -174,7 +174,7 @@ const forgotPassword = async (req, res, next) => {
     });
 
     return successResponse(res, "OTP email sent successfully.", {
-      temp_opt_token,
+      temp_opt_token
     });
   } catch (err) {
     next(err);
