@@ -224,16 +224,44 @@ const updateSupplier = async (req, res, next) => {
 };
 
 // PATCH /api/suppliers/supplier/deactivate/:supplierId - Deactivate a supplier by ID
+// const deactivateSupplier = async (req, res, next) => {
+//   const { supplierId } = req.params;
+//   const authenticatedUserId = req.user._id;
+
+//   try {
+//     const supplier = await Supplier.findOneAndUpdate(
+//       { _id: supplierId, createdBy: authenticatedUserId, isActive: true },
+//       { isActive: false },
+//       { new: true }
+//     );
+
+//     if (!supplier) {
+//       return errorResponse(res, "Supplier not found.", 404);
+//     }
+
+//     if (!supplier.isActive) {
+//       return errorResponse(res, "Supplier is already inactive.", 400);
+//     }
+
+//     supplier.isActive = false;
+//     await supplier.save();
+
+//     return successResponse(res, "Supplier deactivated successfully.", supplier);
+//   } catch (err) {
+//     console.error("Deactivate supplier error:", err);
+//     next(err);
+//   }
+// };
+
 const deactivateSupplier = async (req, res, next) => {
   const { supplierId } = req.params;
   const authenticatedUserId = req.user._id;
 
   try {
-    const supplier = await Supplier.findOneAndUpdate(
-      { _id: supplierId, createdBy: authenticatedUserId, isActive: true },
-      { isActive: false },
-      { new: true }
-    );
+    const supplier = await Supplier.findOne({
+      _id: supplierId,
+      createdBy: authenticatedUserId,
+    });
 
     if (!supplier) {
       return errorResponse(res, "Supplier not found.", 404);
@@ -254,16 +282,48 @@ const deactivateSupplier = async (req, res, next) => {
 };
 
 // PATCH /api/suppliers/supplier/activate/:supplierId - Activate a supplier by ID
+// const activateSupplier = async (req, res, next) => {
+//   const { supplierId } = req.params;
+//   const authenticatedUserId = req.user._id;
+
+//   try {
+//     const supplier = await Supplier.findOneAndUpdate(
+//       { _id: supplierId, createdBy: authenticatedUserId, isActive: false },
+//       { isActive: true },
+//       { new: true }
+//     );
+
+//     if (!supplier) {
+//       return errorResponse(res, "Supplier not found.", 404);
+//     }
+
+//     if (supplier.isActive) {
+//       return errorResponse(res, "Supplier is already active.", 400);
+//     }
+
+//     supplier.isActive = true;
+//     const activatedSupplier = await supplier.save();
+
+//     return successResponse(
+//       res,
+//       "Supplier activated successfully.",
+//       activatedSupplier
+//     );
+//   } catch (err) {
+//     console.error("Activate supplier error:", err);
+//     next(err);
+//   }
+// };
+
 const activateSupplier = async (req, res, next) => {
   const { supplierId } = req.params;
   const authenticatedUserId = req.user._id;
 
   try {
-    const supplier = await Supplier.findOneAndUpdate(
-      { _id: supplierId, createdBy: authenticatedUserId, isActive: false },
-      { isActive: true },
-      { new: true }
-    );
+    const supplier = await Supplier.findOne({
+      _id: supplierId,
+      createdBy: authenticatedUserId,
+    });
 
     if (!supplier) {
       return errorResponse(res, "Supplier not found.", 404);
@@ -274,13 +334,9 @@ const activateSupplier = async (req, res, next) => {
     }
 
     supplier.isActive = true;
-    const activatedSupplier = await supplier.save();
+    await supplier.save();
 
-    return successResponse(
-      res,
-      "Supplier activated successfully.",
-      activatedSupplier
-    );
+    return successResponse(res, "Supplier activated successfully.", supplier);
   } catch (err) {
     console.error("Activate supplier error:", err);
     next(err);
