@@ -131,7 +131,7 @@ To run the automated tests:
 npm test
 ```
 
-API Endpoints
+### API Endpoints
 This section outlines the available API endpoints and their functionalities. All protected routes require a valid JWT in the Authorization header (e.g., Bearer <token>). Many routes also require the isOwner middleware, ensuring only authorized users (owners) can perform certain actions.
 
 1. User Management (/api/users)
