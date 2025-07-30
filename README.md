@@ -287,5 +287,5 @@ This section outlines the available API endpoints and their functionalities. All
 
 ---
 
-### Author
+## Author
 Rahul Chaudhari
