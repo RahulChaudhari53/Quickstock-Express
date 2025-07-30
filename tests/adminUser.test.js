@@ -13,8 +13,8 @@ let testUserToPromotePhone;
 
 beforeAll(async () => {
   const adminLoginRes = await request(app).post("/api/users/login").send({
-    phoneNumber: "9898981910",
-    password: "Admin@123",
+    phoneNumber: "1000000001",
+    password: "QuickStock@1234",
   });
 
   adminUserId = adminLoginRes.body.data.user._id.toString();
