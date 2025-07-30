@@ -124,14 +124,13 @@ The server will typically run on http://localhost:5050.
 ```
 
 
-# Running Tests
-## To run the automated tests:
+### Running Tests
+
+To run the automated tests:
 
 ```bash
 npm test
 ```
-Here's the markdown content you can directly copy and paste into your GitHub README:
-
 
 # API Endpoints
 
