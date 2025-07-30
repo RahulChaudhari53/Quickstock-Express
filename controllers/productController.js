@@ -476,61 +476,6 @@ const activateProduct = async (req, res, next) => {
   }
 };
 
-// // GET /api/products/category/:categoryId - Get products by category
-// const getProductsByCategory = async (req, res, next) => {
-//   const { categoryId } = req.params;
-//   const {
-//     page = 1,
-//     limit = 10,
-//     sortBy = "name",
-//     sortOrder = "asc",
-//   } = req.query;
-
-//   const parsedPage = parseInt(page);
-//   const parsedLimit = parseInt(limit);
-
-//   const skip = (parsedPage - 1) * parsedLimit;
-//   const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1 };
-
-//   try {
-//     const existingCategory = await Category.findById(categoryId);
-//     if (!existingCategory || !existingCategory.isActive) {
-//       return errorResponse(res, "Category not found or is inactive.", 404);
-//     }
-
-//     const filter = { category: categoryId, isActive: true };
-
-//     const [products, total] = await Promise.all([
-//       Product.find(filter)
-//         .populate("supplier", "name contactPerson phone email")
-//         .populate("category", "name description")
-//         .sort(sort)
-//         .skip(skip)
-//         .limit(parsedLimit)
-//         .lean(),
-//       Product.countDocuments(filter),
-//     ]);
-
-//     const totalPages = Math.ceil(total / parsedLimit);
-//     const pagination = {
-//       page: parsedPage,
-//       limit: parsedLimit,
-//       totalItems: total,
-//       totalPages,
-//       hasNextPage: parsedPage < totalPages,
-//       hasPrevPage: parsedPage > 1,
-//     };
-
-//     return successResponse(res, "Products retrieved successfully.", {
-//       products: products,
-//       pagination: pagination,
-//     });
-//   } catch (err) {
-//     console.error("Error fetching products by category:", err);
-//     next(err);
-//   }
-// };
-
 module.exports = {
   createProduct,
   getAllProducts,
@@ -538,5 +483,4 @@ module.exports = {
   updateProduct,
   deleteProduct,
   activateProduct,
-  // getProductsByCategory,
 };
