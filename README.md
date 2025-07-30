@@ -119,3 +119,12 @@ To start the development server:
 
 ```bash
 npm start
+
+The server will typically run on http://localhost:5050.
+
+Running Tests
+To run the automated tests:
+
+Bash
+
+npm test
