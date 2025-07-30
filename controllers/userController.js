@@ -119,6 +119,11 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+// simple logout response api
+const logoutUser = (req, res, next) => {
+  return successResponse(res, "User logged out successfully.");
+};
+
 // POST /api/users/forgotPassword - Send reset password email
 const forgotPassword = async (req, res, next) => {
   console.log("Forgot Password Request:", req.body);
@@ -174,7 +179,7 @@ const forgotPassword = async (req, res, next) => {
     });
 
     return successResponse(res, "OTP email sent successfully.", {
-      temp_opt_token
+      temp_opt_token,
     });
   } catch (err) {
     next(err);
@@ -474,6 +479,7 @@ const deactivateUser = async (req, res, next) => {
 module.exports = {
   registerUser,
   loginUser,
+  logoutUser,
   forgotPassword,
   verifyOtp,
   resetPassword,
