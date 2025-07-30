@@ -216,6 +216,22 @@ const getStockMovement = async (req, res, next) => {
         $facet: {
           paginatedHistory: [
             { $unwind: "$movementHistory" },
+
+            // mobile fix
+
+            {
+              $addFields: {
+                "movementHistory._id": {
+                  $ifNull: [
+                    "$movementHistory._id",
+                    new mongoose.Types.ObjectId(),
+                  ],
+                },
+              },
+            },
+
+            //
+
             { $sort: { "movementHistory.date": -1 } },
             { $skip: skip },
             { $limit: parsedLimit },
