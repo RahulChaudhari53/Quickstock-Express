@@ -7,6 +7,7 @@ const {
   registerUser,
   loginUser,
   forgotPassword,
+  logoutUser,
   verifyOtp,
   resetPassword,
   getCurrentUser,
@@ -38,6 +39,7 @@ router.post("/resetPassword", resetPassword);
 router.use(authenticateUser);
 
 router.get("/me", getCurrentUser);
+router.post("/logout", logoutUser);
 
 router.use(isOwner);
 router.patch("/updateUserInfo/:userId", isSelf, updateUserInfo);
