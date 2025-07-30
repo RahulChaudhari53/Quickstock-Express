@@ -20,5 +20,6 @@ router.post("/create", createSale);
 router.get("/", getAllSales);
 router.get("/sale/:saleId", getSaleById);
 router.delete("/sale/cancel/:saleId", cancelSale); // this is if customer returns the product
+// for now its there is no time limit
 
 module.exports = router;

@@ -189,7 +189,7 @@ const activateCategory = async (req, res, next) => {
 module.exports = {
   createCategory,
   getAllCategories,
-  getCategoryById, // not usin
+  getCategoryById, // not using in mobile
   deleteCategory,
   activateCategory,
 };
