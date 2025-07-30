@@ -121,3 +121,263 @@ To start the development server:
 npm start
 
 The server will typically run on http://localhost:5050.
+```
+Got it, my apologies for the repeated misunderstanding! You just want the content from "Running Tests" onwards, formatted in Markdown.
+
+Here's the requested portion of the README:
+
+Running Tests
+To run the automated tests:
+
+Bash
+
+npm test
+API Endpoints
+This section outlines the available API endpoints and their functionalities. All protected routes require a valid JWT in the Authorization header (e.g., Bearer <token>). Many routes also require the isOwner middleware, ensuring only authorized users (owners) can perform certain actions.
+
+1. User Management (/api/users)
+POST /api/users/signup
+
+Register a new user.
+
+Body: username, email, password, role (e.g., owner, employee)
+
+POST /api/users/login
+
+Log in a user and receive a JWT.
+
+Body: email, password
+
+POST /api/users/forgotPassword
+
+Request a password reset.
+
+Body: email
+
+POST /api/users/verify-otp
+
+Verify OTP for password reset.
+
+Body: email, otp
+
+POST /api/users/resetPassword
+
+Reset user password after OTP verification.
+
+Body: email, newPassword
+
+GET /api/users/me (Protected)
+
+Get the currently authenticated user's information.
+
+POST /api/users/logout (Protected)
+
+Log out the current user (invalidates JWT, typically server-side).
+
+PATCH /api/users/updateUserInfo/:userId (Protected, isOwner, isSelf)
+
+Update user's general information.
+
+Body: username, address, etc.
+
+PATCH /api/users/updatePassword/:userId (Protected, isOwner, isSelf)
+
+Update user's password.
+
+Body: oldPassword, newPassword
+
+PATCH /api/users/updateEmail/:userId (Protected, isOwner, isSelf)
+
+Update user's email address.
+
+Body: newEmail
+
+PATCH /api/users/updateProfileImage/:userId (Protected, isOwner, isSelf, multipart/form-data)
+
+Upload/update user's profile image.
+
+Body: profileImage (file)
+
+PATCH /api/users/addPhoneNumber/:userId (Protected, isOwner, isSelf)
+
+Add a phone number to user's profile.
+
+Body: phoneNumber
+
+PATCH /api/users/deletePhoneNumber/:userId (Protected, isOwner, isSelf)
+
+Delete a phone number from user's profile.
+
+Body: phoneNumber
+
+DELETE /api/users/deactivateUser/:userId (Protected, isOwner, isSelf)
+
+Deactivate a user account.
+
+2. Category Management (/api/categories)
+POST /api/categories/create (Protected, isOwner)
+
+Create a new product category.
+
+Body: name, description
+
+GET /api/categories (Protected, isOwner)
+
+Get all product categories.
+
+GET /api/categories/category/:categoryId (Protected, isOwner)
+
+Get a single category by ID. (Note: "not using in mobile" indicated, but API exists)
+
+DELETE /api/categories/category/deactivate/:categoryId (Protected, isOwner)
+
+Deactivate a category (soft delete).
+
+PATCH /api/categories/category/activate/:categoryId (Protected, isOwner)
+
+Activate a deactivated category.
+
+3. Dashboard (/api/dashboard)
+GET /api/dashboard/overview (Protected, isOwner)
+
+Get an overview of key dashboard metrics (e.g., total sales, stock value).
+
+4. Product Management (/api/products)
+POST /api/products/create (Protected, isOwner)
+
+Create a new product.
+
+Body: name, description, price, categoryId, supplierId, sku, initialStock, etc.
+
+GET /api/products (Protected, isOwner)
+
+Get all products.
+
+GET /api/products/product/:productId (Protected, isOwner)
+
+Get a single product by ID.
+
+PATCH /api/products/product/update/:productId (Protected, isOwner)
+
+Update product details.
+
+Body: name, description, price, categoryId, supplierId, sku, etc.
+
+DELETE /api/products/product/deactivate/:productId (Protected, isOwner)
+
+Deactivate a product (soft delete).
+
+PATCH /api/products/product/activate/:productId (Protected, isOwner)
+
+Activate a deactivated product.
+
+5. Purchase Management (/api/purchases)
+POST /api/purchases/create (Protected, isOwner)
+
+Create a new purchase order.
+
+Body: supplierId, products (array of productId, quantity, unitPrice), purchaseDate, etc.
+
+GET /api/purchases (Protected, isOwner)
+
+Get all purchase orders.
+
+GET /api/purchases/purchase/:purchaseId (Protected, isOwner)
+
+Get a single purchase order by ID.
+
+PATCH /api/purchases/purchase/update/:purchaseId (Protected, isOwner)
+
+Update details of a purchase order.
+
+Body: products, status, etc.
+
+PATCH /api/purchases/purchase/cancel/:purchaseId (Protected, isOwner)
+
+Cancel a purchase order.
+
+PATCH /api/purchases/purchase/receive/:purchaseId (Protected, isOwner)
+
+Mark a purchase order as received (updates stock).
+
+6. Sale Management (/api/sales)
+POST /api/sales/create (Protected, isOwner)
+
+Create a new sale.
+
+Body: customerId (optional), products (array of productId, quantity, unitPrice), saleDate, paymentMethod, etc.
+
+GET /api/sales (Protected, isOwner)
+
+Get all sales.
+
+GET /api/sales/sale/:saleId (Protected, isOwner)
+
+Get a single sale by ID.
+
+DELETE /api/sales/sale/cancel/:saleId (Protected, isOwner)
+
+Cancel a sale (e.g., for returns).
+
+7. Stock Management (/api/stock)
+GET /api/stock (Protected, isOwner)
+
+Get current stock levels for all products.
+
+GET /api/stock/product/:productId (Protected, isOwner)
+
+Get stock details for a specific product.
+
+GET /api/stock/history/:productId (Protected, isOwner)
+
+Get stock movement history for a specific product.
+
+8. Supplier Management (/api/suppliers)
+POST /api/suppliers/create (Protected, isOwner)
+
+Create a new supplier.
+
+Body: name, contactPerson, phoneNumber, email, address
+
+GET /api/suppliers (Protected, isOwner)
+
+Get all suppliers.
+
+GET /api/suppliers/supplier/:supplierId (Protected, isOwner)
+
+Get a single supplier by ID.
+
+PATCH /api/suppliers/supplier/update/:supplierId (Protected, isOwner)
+
+Update supplier details.
+
+Body: name, contactPerson, phoneNumber, email, address, etc.
+
+PATCH /api/suppliers/supplier/deactivate/:supplierId (Protected, isOwner)
+
+Deactivate a supplier.
+
+PATCH /api/suppliers/supplier/activate/:supplierId (Protected, isOwner)
+
+Activate a deactivated supplier.
+
+Contributing
+If you'd like to contribute to this project, please follow these steps:
+
+Fork the repository.
+
+Create a new branch (git checkout -b feature/your-feature-name).
+
+Make your changes.
+
+Commit your changes (git commit -m 'Add new feature').
+
+Push to the branch (git push origin feature/your-feature-name).
+
+Create a Pull Request.
+
+License
+This project is licensed under the ISC License. See the LICENSE file for more details.
+
+Contact
+For any inquiries or feedback, please reach out to [Your Name/Email Address/Link to your GitHub profile].
