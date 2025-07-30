@@ -122,16 +122,15 @@ npm start
 
 The server will typically run on http://localhost:5050.
 ```
-Got it, my apologies for the repeated misunderstanding! You just want the content from "Running Tests" onwards, formatted in Markdown.
 
-Here's the requested portion of the README:
 
 Running Tests
 To run the automated tests:
 
-Bash
-
+```bash
 npm test
+```
+
 API Endpoints
 This section outlines the available API endpoints and their functionalities. All protected routes require a valid JWT in the Authorization header (e.g., Bearer <token>). Many routes also require the isOwner middleware, ensuring only authorized users (owners) can perform certain actions.
 
