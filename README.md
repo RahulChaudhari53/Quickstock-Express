@@ -285,5 +285,7 @@ This section outlines the available API endpoints and their functionalities. All
 * **`PATCH /api/suppliers/supplier/activate/:supplierId`** (Protected, `isOwner`)
     * Activate a deactivated supplier.
 
+---
+
 ### Author
 Rahul Chaudhari
