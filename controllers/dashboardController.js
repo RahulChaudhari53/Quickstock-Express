@@ -120,6 +120,7 @@ const getDashboardOverview = async (req, res, next) => {
     const purchaseResults = purchaseOrders[0] || {};
 
     // final response
+    
     const overview = {
       totalStockItems: stockResults.totalStockItems || 0,
       inventoryPurchaseValue: stockResults.inventoryPurchaseValue || 0,

@@ -34,6 +34,7 @@ const createProduct = async (req, res, next) => {
 
   try {
     const existingProduct = await Product.findOne({
+      createdBy: authenticatedUserId,
       $or: [
         { sku: { $regex: `^${productData.sku}$`, $options: "i" } },
         { name: { $regex: `^${productData.name}$`, $options: "i" } },
@@ -41,7 +42,8 @@ const createProduct = async (req, res, next) => {
     }).session(session);
 
     if (existingProduct) {
-      const isSku = existingProduct.sku.toLowerCase() === sku.toLowerCase();
+      const isSku =
+        existingProduct.sku.toLowerCase() === productData.sku.toLowerCase();
       const message = `Product with this ${
         isSku ? "SKU" : "name"
       } already exists.`;
@@ -93,6 +95,7 @@ const createProduct = async (req, res, next) => {
 
     return successResponse(
       res,
+
       "Product created successfully.",
       { product: savedProduct, stock },
       201
